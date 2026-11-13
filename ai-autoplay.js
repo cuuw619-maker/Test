@@ -18,13 +18,13 @@ function stop(){if(!running)return;running=false;loopToken++;clearTimeout(timer)
 async function start(id){stop();if(!window.MultiGameAPI){status(id,"Игровой API ещё не загружен");return}running=true;activeGame=id;const token=++loopToken;setControls(id,true);status(id,"ИИ запускается…");
  try{
   if(id==="snake"){const ok=window.MultiGameAPI.snake.start(stepDelay/5);if(!ok)throw new Error("Сначала дождись завершения обучения змейки");status(id,"ИИ управляет змейкой и использует сохранённую Q-learning модель");watchGame(id,token,()=>window.MultiGameAPI.snake.done());return}
-  if(id==="pong"){window.MultiGameAPI.pong.start();status(id,"ИИ отслеживает мяч и управляет твоей платформой");pongLoop(token);return}
+  if(id==="pong"){if(window.MultiGameAPI.pong.state().over)window.MultiGameAPI.pong.reset();window.MultiGameAPI.pong.start();status(id,"ИИ отслеживает мяч и управляет твоей платформой");pongLoop(token);return}
   if(id==="shooter"){window.MultiGameAPI.shooter.start();status(id,"ИИ уклоняется от астероидов и ведёт огонь");shooterLoop(token);return}
-  if(id==="tictactoe"){status(id,"ИИ играет обеими сторонами");tttLoop(token);return}
-  if(id==="2048"){status(id,"ИИ оценивает варианты ходов и ищет выгодные слияния");game2048Loop(token);return}
-  if(id==="memory"){status(id,"ИИ открывает карточки, запоминает символы и ищет пары");await memoryLoop(token);return}
+  if(id==="tictactoe"){window.MultiGameAPI.ttt.reset();status(id,"ИИ играет обеими сторонами");tttLoop(token);return}
+  if(id==="2048"){if(window.MultiGameAPI.game2048.done())window.MultiGameAPI.game2048.reset();status(id,"ИИ оценивает варианты ходов и ищет выгодные слияния");game2048Loop(token);return}
+  if(id==="memory"){window.MultiGameAPI.memory.reset();status(id,"ИИ открывает карточки, запоминает символы и ищет пары");await memoryLoop(token);return}
   if(id==="mines"){window.MultiGameAPI.mines.restart();status(id,"ИИ применяет логические правила и оценивает риск неизвестных клеток");minesLoop(token);return}
-  if(id==="reaction"){status(id,"ИИ ждёт сигнал и нажимает после его появления");reactionLoop(token);return}
+  if(id==="reaction"){window.MultiGameAPI.reaction.reset();status(id,"ИИ ждёт сигнал и нажимает после его появления");reactionLoop(token);return}
  }catch(err){status(id,err.message||"Не удалось запустить ИИ");running=false;activeGame=null;setControls(id,false)}
 }
 function schedule(token,fn,ms=stepDelay){timer=setTimeout(()=>{if(running&&token===loopToken)fn()},ms)}
@@ -57,5 +57,5 @@ function minesLoop(token){if(!running||token!==loopToken)return;const api=window
 function pongLoop(token){if(!running||token!==loopToken)return;const s=window.MultiGameAPI.pong.state();if(s.over){finish("pong",s.score>s.cpu?"ИИ выиграл матч.":"Матч завершён.");return}let target=s.y;if(s.vx<0){const t=(s.x-42)/Math.max(.1,-s.vx),raw=s.y+s.vy*t;const span=s.height-20,period=span*2;let folded=((raw%period)+period)%period;target=folded>span?period-folded:folded}else target=s.height/2;window.MultiGameAPI.pong.control(target);schedule(token,()=>pongLoop(token),stepDelay)}
 function shooterLoop(token){if(!running||token!==loopToken)return;const s=window.MultiGameAPI.shooter.state();if(s.lives<=0){finish("shooter","Корабль уничтожен. ИИ завершил попытку.");return}let danger=0,move=0;for(const r of s.rocks){const dx=r.x-s.ship.x,dy=s.ship.y-r.y;if(dy>-45&&dy<145&&Math.abs(dx)<r.r+42){danger=Math.max(danger,(r.r+42-Math.abs(dx))/(r.r+42));move+=dx>0?1:-1}}const target=move>0?"left":move<0?"right":"";window.MultiGameAPI.shooter.control({left:target==="left",right:target==="right",fire:true});schedule(token,()=>shooterLoop(token),stepDelay)}
 async function reactionLoop(token){const zone=$("#reactionZone");if(zone.classList.contains("result")||zone.classList.contains("early"))window.MultiGameAPI.reaction.reset();zone.click();while(running&&token===loopToken&&!zone.classList.contains("ready"))await delay(40);if(!running||token!==loopToken)return;await delay(30);zone.click();finish("reaction","ИИ завершил автоматическую попытку реакции.");}
-document.addEventListener("DOMContentLoaded",()=>games.forEach(panel));
+function mountPanels(){games.forEach(panel)}\nif(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mountPanels,{once:true});else mountPanels();
 })();
