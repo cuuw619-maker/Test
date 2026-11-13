@@ -6,16 +6,16 @@ const FAVORITES_KEY="wallora-favorites-v2";
 const SETTINGS_KEY="wallora-settings-v1";
 const CATEGORIES={
  wallpapers:[
-  ["all","Для тебя","wallpaper"],
-  ["anime","Аниме","anime landscape illustration"],
-  ["minimal","Минимализм","minimalist wallpaper"],
-  ["gaming","Игры","video game digital art"],
-  ["cyberpunk","Киберпанк","cyberpunk city neon"],
-  ["dark","Тёмные","dark aesthetic wallpaper"],
+  ["all","Для тебя","wallpaper aesthetic"],
+  ["anime","Аниме","anime wallpaper"],
+  ["minimal","Минимализм","minimalist aesthetic background"],
+  ["gaming","Игры","video game wallpaper"],
+  ["cyberpunk","Киберпанк","cyberpunk wallpaper"],
+  ["dark","Тёмные","dark aesthetic"],
   ["cars","Авто","sports car photography"],
   ["space","Космос","galaxy nebula space"],
   ["nature","Природа","mountain landscape"],
-  ["abstract","Абстракция","abstract digital art"]
+  ["abstract","Абстракция","abstract wallpaper"]
  ],
  avatars:[
   ["all","Для тебя","avatar illustration"],
@@ -81,35 +81,121 @@ function closeSettings(){el.settings.hidden=true;if(el.modal.hidden)document.bod
 function showToast(message){el.toast.textContent=message;el.toast.classList.add("is-visible");clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>el.toast.classList.remove("is-visible"),2300)}
 function cleanText(value){return String(value||"").replace(/<[^>]*>/g," ").replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;/g,"'").replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/\s+/g," ").trim()}
 function metadataValue(metadata,key){return cleanText(metadata&&metadata[key]&&metadata[key].value)}
-function apiUrl(continuation){
- const params=new URLSearchParams({action:"query",format:"json",origin:"*",generator:"search",gsrnamespace:"6",gsrsearch:state.query,gsrlimit:"30",prop:"imageinfo",iiprop:"url|size|mime|extmetadata",iiurlwidth:"1000",iiextmetadatalanguage:"en"});
+function commonsApiUrl(continuation){
+ const params=new URLSearchParams({action:"query",format:"json",origin:"*",generator:"search",gsrnamespace:"6",gsrsearch:state.query,gsrlimit:"30",prop:"imageinfo",iiprop:"url|size|mime|extmetadata",iiurlwidth:"1100",iiextmetadatalanguage:"en"});
  if(continuation)Object.entries(continuation).forEach(([key,value])=>params.set(key,String(value)));
  return COMMONS_API+"?"+params.toString();
+}
+function openverseQuery(){
+ const query=state.query.trim();
+ if(state.mode==="avatars")return query+" profile icon portrait";
+ return query+" wallpaper";
+}
+function articQuery(){
+ const q=(state.query+" "+state.category).toLowerCase();
+ if(/anime|japan|pixel|avatar/.test(q))return "Japanese art print";
+ if(/car|auto/.test(q))return "automobile";
+ if(/space|galaxy|nebula/.test(q))return "abstract art";
+ if(/nature|mountain|forest|ocean/.test(q))return "landscape";
+ if(/city|cyberpunk|gaming|game/.test(q))return "city night";
+ if(/minimal|abstract|dark/.test(q))return "abstract art";
+ return "illustration";
 }
 function normalizePage(page){
  const info=page.imageinfo&&page.imageinfo[0];if(!info||!info.thumburl||!info.url)return null;
  if(info.mime&&!info.mime.startsWith("image/"))return null;
  const metadata=info.extmetadata||{},width=Number(info.width)||0,height=Number(info.height)||0;
- return{id:String(page.pageid),title:cleanText((page.title||"Image").replace(/^File:/i,"").replace(/\.[^.]+$/,"")),thumb:info.thumburl,original:info.url,pageUrl:info.descriptionurl||"https://commons.wikimedia.org/",width,height,mime:info.mime||"",artist:metadataValue(metadata,"Artist")||metadataValue(metadata,"Credit")||"Автор не указан",license:metadataValue(metadata,"LicenseShortName")||metadataValue(metadata,"UsageTerms")||"Условия на странице файла"};
+ return{id:"commons:"+String(page.pageid),title:cleanText((page.title||"Image").replace(/^File:/i,"").replace(/\\.[^.]+$/,"")),thumb:info.thumburl,original:info.url,pageUrl:info.descriptionurl||"https://commons.wikimedia.org/",width,height,mime:info.mime||"",artist:metadataValue(metadata,"Artist")||metadataValue(metadata,"Credit")||"Автор не указан",license:metadataValue(metadata,"LicenseShortName")||metadataValue(metadata,"UsageTerms")||"Условия на странице файла",source:"Wikimedia Commons"};
+}
+function normalizeOpenverse(item){
+ if(!item||!item.url||!item.foreign_landing_url)return null;
+ const width=Number(item.width)||0,height=Number(item.height)||0;
+ const filetype=String(item.filetype||"").toLowerCase();
+ if(filetype&&!["jpg","jpeg","png","webp","gif","avif"].includes(filetype))return null;
+ const license=[item.license,item.license_version].filter(Boolean).join(" ").toUpperCase();
+ return{id:"openverse:"+String(item.id),title:cleanText(item.title||"Openverse image")||"Untitled image",thumb:item.thumbnail||item.url,original:item.url,pageUrl:item.foreign_landing_url,width,height,mime:filetype?"image/"+filetype:"",artist:cleanText(item.creator||"Автор не указан"),license:license||"Проверь лицензию на странице файла",source:"Openverse"};
+}
+function normalizeArtic(item){
+ if(!item||!item.image_id||item.is_public_domain!==true)return null;
+ const id=String(item.image_id);
+ const title=cleanText(item.title||"Artwork");
+ return{id:"artic:"+String(item.id),title,thumb:"https://www.artic.edu/iiif/2/"+encodeURIComponent(id)+"/full/843,/0/default.jpg",original:"https://www.artic.edu/iiif/2/"+encodeURIComponent(id)+"/full/2000,/0/default.jpg",pageUrl:"https://www.artic.edu/artworks/"+item.id,width:0,height:0,mime:"image/jpeg",artist:cleanText(item.artist_display||"Art Institute of Chicago"),license:"Public Domain · Open Access",source:"Art Institute of Chicago"};
+}
+function shouldLoadNasa(){
+ return /space|galaxy|nebula|planet|cosmos|космос|планет/i.test(state.query+" "+state.category);
+}
+async function fetchCommonsPage(cursor){
+ const response=await fetch(commonsApiUrl(cursor));if(!response.ok)throw new Error("Wikimedia Commons "+response.status);
+ const data=await response.json(),pages=Object.values(data.query&&data.query.pages?data.query.pages:{});
+ return{provider:"Wikimedia Commons",items:pages.map(normalizePage).filter(Boolean),next:data.continue||null};
+}
+async function fetchOpenversePage(nextUrl){
+ const url=nextUrl||("https://api.openverse.org/v1/images/?"+new URLSearchParams({q:openverseQuery(),page_size:"30"}).toString());
+ const response=await fetch(url,{headers:{Accept:"application/json"}});if(!response.ok)throw new Error("Openverse "+response.status);
+ const data=await response.json();
+ return{provider:"Openverse",items:(data.results||[]).map(normalizeOpenverse).filter(Boolean),next:data.next||null};
+}
+async function fetchArticPage(page){
+ const params=new URLSearchParams({q:articQuery(),limit:"24",page:String(page),fields:"id,title,artist_display,image_id,is_public_domain,date_display"});
+ params.set("query[term][is_public_domain]","true");
+ const response=await fetch("https://api.artic.edu/api/v1/artworks/search?"+params.toString());if(!response.ok)throw new Error("Art Institute "+response.status);
+ const data=await response.json(),pagination=data.pagination||{};
+ const next=Number(pagination.current_page||page)<Number(pagination.total_pages||0)?Number(pagination.current_page||page)+1:null;
+ return{provider:"Art Institute of Chicago",items:(data.data||[]).map(normalizeArtic).filter(Boolean),next};
+}
+async function fetchNasaPage(page){
+ const params=new URLSearchParams({q:state.query+" space",media_type:"image",page_size:"30",page:String(page)});
+ const response=await fetch("https://images-api.nasa.gov/search?"+params.toString());if(!response.ok)throw new Error("NASA "+response.status);
+ const data=await response.json(),items=[];
+ (data.collection&&data.collection.items||[]).forEach(entry=>{
+  const meta=(entry.data||[])[0]||{},preview=(entry.links||[]).find(link=>link.rel==="preview")||(entry.links||[])[0];
+  if(!preview||!preview.href||!meta.nasa_id)return;
+  const original=preview.href.replace(/~thumb(?=\\.[a-z0-9]+(?:$|\\?))/i,"~orig");
+  items.push({id:"nasa:"+meta.nasa_id,title:cleanText(meta.title||"NASA image"),thumb:preview.href,original,pageUrl:entry.href||"https://images.nasa.gov/",width:0,height:0,mime:"image/jpeg",artist:cleanText(meta.photographer||meta.center||"NASA"),license:"NASA media · проверь условия конкретного файла",source:"NASA Image and Video Library"});
+ });
+ const paging=data.collection&&data.collection.metadata||{};
+ const next=Number(paging.total_hits||0)>0&&items.length>=20?page+1:null;
+ return{provider:"NASA Image and Video Library",items,next};
 }
 async function loadWallpapers(append=false){
  if(append&&state.loading)return;
- if(append&&!state.continuation)return;
- const requestId=++state.requestId;state.loading=true;el.loadMore.disabled=true;el.loadMore.textContent="Загружаем...";
- if(!append){state.items=[];el.grid.innerHTML='<div class="loading-state"><span class="loader"></span><p>Подбираем изображения...</p></div>';el.empty.hidden=true;el.loadMoreWrap.hidden=true}
- try{
-  const response=await fetch(apiUrl(append?state.continuation:null));if(!response.ok)throw new Error("Wikimedia Commons: "+response.status);
-  const data=await response.json();if(requestId!==state.requestId)return;
-  const pages=Object.values(data.query&&data.query.pages?data.query.pages:{}),normalized=pages.map(normalizePage).filter(Boolean),seen=new Set(state.items.map(item=>item.id));
-  normalized.forEach(item=>{if(!seen.has(item.id)&&(item.width>=420||item.height>=420)){state.items.push(item);seen.add(item.id)}});
-  state.continuation=data.continue||null;state.loading=false;renderGrid();
-  el.status.textContent="Wikimedia Commons · открытая медиатека";el.loadMoreWrap.hidden=!state.continuation||state.view==="favorites";
-  el.loadMore.disabled=false;el.loadMore.innerHTML='Показать ещё <span>↓</span>';
-  if(!state.items.length){el.empty.hidden=false;el.emptyTitle.textContent="Пока нет подходящих изображений";el.emptyDescription.textContent="Попробуй более короткий запрос или другую категорию."}
- }catch(error){
-  if(requestId!==state.requestId)return;state.loading=false;el.status.textContent="Ошибка загрузки";el.loadMore.disabled=false;el.loadMore.innerHTML='Повторить загрузку <span>↻</span>';
-  if(!state.items.length){el.grid.innerHTML="";el.empty.hidden=false;el.emptyTitle.textContent="Не удалось подключиться к библиотеке";el.emptyDescription.textContent="Проверь подключение к интернету и повтори попытку. "+error.message}else showToast("Не удалось загрузить следующую страницу");
+ const currentCursor=append?(state.continuation||{}):{commons:null,openverse:null,artic:1,nasa:1};
+ if(append&&!currentCursor.commons&&!currentCursor.openverse&&!currentCursor.artic&&!currentCursor.nasa)return;
+ const requestId=++state.requestId;state.loading=true;el.loadMore.disabled=true;el.loadMore.textContent="Собираем...";
+ if(!append){state.items=[];el.grid.innerHTML='<div class="loading-state"><span class="loader"></span><p>Ищем изображения в нескольких библиотеках...</p></div>';el.empty.hidden=true;el.loadMoreWrap.hidden=true}
+ const tasks=[];
+ if(!append||currentCursor.commons)tasks.push(fetchCommonsPage(currentCursor.commons));
+ if(!append||currentCursor.openverse)tasks.push(fetchOpenversePage(currentCursor.openverse));
+ if(!append||currentCursor.artic)tasks.push(fetchArticPage(currentCursor.artic||1));
+ if(shouldLoadNasa()&&(!append||currentCursor.nasa))tasks.push(fetchNasaPage(currentCursor.nasa||1));
+ const results=await Promise.all(tasks.map(async task=>{try{return await task}catch(error){return{provider:"Неизвестный источник",items:[],next:null,error}}}));
+ if(requestId!==state.requestId)return;
+ const failed=results.filter(result=>result.error);
+ const successful=results.filter(result=>!result.error);
+ const seenIds=new Set(state.items.map(item=>item.id));
+ const seenUrls=new Set(state.items.map(item=>item.original));
+ successful.forEach(result=>result.items.forEach(item=>{
+  if(!seenIds.has(item.id)&&!seenUrls.has(item.original)&&(item.width===0||item.height===0||Math.max(item.width,item.height)>=360)){
+   state.items.push(item);seenIds.add(item.id);seenUrls.add(item.original);
+  }
+ }));
+ state.continuation={
+  commons:successful.find(x=>x.provider==="Wikimedia Commons")?.next||null,
+  openverse:successful.find(x=>x.provider==="Openverse")?.next||null,
+  artic:successful.find(x=>x.provider==="Art Institute of Chicago")?.next||null,
+  nasa:successful.find(x=>x.provider==="NASA Image and Video Library")?.next||null
+ };
+ const hasMore=Object.values(state.continuation).some(Boolean);
+ state.loading=false;renderGrid();
+ const providerNames=successful.filter(x=>x.items.length).map(x=>x.provider);
+ el.status.textContent=providerNames.length?providerNames.length+" источника изображений":"Источники временно недоступны";
+ el.loadMoreWrap.hidden=!hasMore||state.view==="favorites";el.loadMore.disabled=false;el.loadMore.innerHTML='Показать ещё <span>↓</span>';
+ if(!state.items.length){
+  el.empty.hidden=false;el.emptyTitle.textContent=failed.length===tasks.length?"Не удалось подключиться к библиотекам":"Пока нет подходящих изображений";
+  el.emptyDescription.textContent="Попробуй другой запрос или повтори загрузку. Некоторые источники могут временно ограничивать запросы.";
   el.loadMoreWrap.hidden=false;
+ }else if(failed.length===tasks.length){
+  showToast("Источники изображений временно не отвечают");
  }
 }
 function visibleItems(){
@@ -130,7 +216,7 @@ function makeCard(item,index){
  const fav=document.createElement("button");fav.className="favorite-button"+(isFavorite(item.id)?" is-favorite":"");fav.type="button";fav.textContent=isFavorite(item.id)?"♥":"♡";fav.setAttribute("aria-label",isFavorite(item.id)?"Убрать из избранного":"Добавить в избранное");
  fav.addEventListener("click",event=>{event.stopPropagation();toggleFavorite(item);const saved=isFavorite(item.id);fav.classList.toggle("is-favorite",saved);fav.textContent=saved?"♥":"♡";fav.setAttribute("aria-label",saved?"Убрать из избранного":"Добавить в избранное")});
  overlay.append(fav);wrap.append(img,overlay);wrap.addEventListener("click",()=>openImage(item));wrap.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openImage(item)}});
- const caption=document.createElement("div");caption.className="card-caption";const title=document.createElement("span");title.className="card-title";title.textContent=item.title;title.title=item.title;const size=document.createElement("span");size.className="card-size";size.textContent=item.width&&item.height?item.width+"×"+item.height:"IMAGE";caption.append(title,size);card.append(wrap,caption);
+ const caption=document.createElement("div");caption.className="card-caption";const title=document.createElement("span");title.className="card-title";title.textContent=item.title;title.title=item.title;const size=document.createElement("span");size.className="card-size";size.textContent=item.width&&item.height?item.width+"×"+item.height:"IMAGE";caption.append(title,size);const provider=document.createElement("div");provider.className="card-provider";provider.textContent=item.source||"Открытый источник";card.append(wrap,caption,provider);
  if(settings.tilt&&!matchMedia("(pointer: coarse)").matches){
   card.addEventListener("pointermove",event=>{const r=card.getBoundingClientRect(),x=(event.clientX-r.left)/r.width-.5,y=(event.clientY-r.top)/r.height-.5;card.style.transform="perspective(850px) rotateX("+(-y*4)+"deg) rotateY("+(x*5)+"deg) translateY(-2px)"});
   card.addEventListener("pointerleave",()=>{card.style.transform=""});
@@ -152,7 +238,7 @@ function updateModalFavorite(){const saved=state.activeItem&&isFavorite(state.ac
 function addFact(label,value){if(!value)return;const span=document.createElement("span");span.textContent=label+": "+value;el.modalFacts.append(span)}
 function openImage(item){
  state.activeItem=item;el.modalImage.src=item.original;el.modalImage.alt=item.title;el.modalTitle.textContent=item.title;el.modalFacts.innerHTML="";
- addFact("Размер",item.width&&item.height?item.width+" × "+item.height:"Не указан");addFact("Формат",item.mime.replace("image/","").toUpperCase());addFact("Лицензия",item.license);
+ addFact("Размер",item.width&&item.height?item.width+" × "+item.height:"Не указан");addFact("Формат",item.mime.replace("image/","").toUpperCase());addFact("Источник",item.source);addFact("Лицензия",item.license);
  el.modalCredit.textContent="Автор / источник: "+item.artist;el.download.href=item.original;el.source.href=item.pageUrl;el.license.textContent="Перед использованием проверь лицензию на странице оригинала. Некоторые лицензии требуют указания автора или сохранения той же лицензии.";
  updateModalFavorite();el.modal.hidden=false;document.body.style.overflow="hidden";el.modalClose.focus();
 }
@@ -219,7 +305,7 @@ function newParticle(){return{x:Math.random()*canvasWidth,y:Math.random()*canvas
 function resizeCanvas(){const canvas=$("#ambientCanvas"),dpr=Math.min(window.devicePixelRatio||1,1.5);canvasWidth=window.innerWidth;canvasHeight=window.innerHeight;canvas.width=Math.floor(canvasWidth*dpr);canvas.height=Math.floor(canvasHeight*dpr);canvasContext.setTransform(dpr,0,0,dpr,0,0)}
 function stopParticles(){if(canvasFrame)cancelAnimationFrame(canvasFrame);canvasFrame=0;if(canvasContext)canvasContext.clearRect(0,0,canvasWidth,canvasHeight)}
 function setupEvents(){
- el.searchForm.addEventListener("submit",event=>{event.preventDefault();const q=el.searchInput.value.trim();if(!q){chooseCategory("all");return}state.category="search";state.query=q;state.view="all";el.categoryRow.querySelectorAll(".category-chip").forEach(b=>b.classList.remove("is-active"));loadWallpapers(false)});
+ el.searchForm.addEventListener("submit",event=>{event.preventDefault();const q=el.searchInput.value.trim();if(!q){chooseCategory("all");return}state.category="search";state.query=q;state.view="all";state.continuation=null;el.categoryRow.querySelectorAll(".category-chip").forEach(b=>b.classList.remove("is-active"));loadWallpapers(false)});
  el.categoryRow.addEventListener("click",event=>{const button=event.target.closest("[data-category]");if(button)chooseCategory(button.dataset.category)});
  el.orientation.addEventListener("change",()=>{state.orientation=el.orientation.value;renderGrid()});el.sort.addEventListener("change",()=>{state.sort=el.sort.value;renderGrid()});
  el.loadMore.addEventListener("click",()=>state.continuation?loadWallpapers(true):loadWallpapers(false));
