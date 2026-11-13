@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0d1018">
 <meta name="description" content="WALLORA — обои, аватарки и случайные открытия из Википедии.">
 <title>WALLORA — твой экран, твой стиль</title>
+<link rel="preconnect" href="https://wallhaven.cc">
+<link rel="preconnect" href="https://api.waifu.im">
 <link rel="preconnect" href="https://commons.wikimedia.org">
 <link rel="preconnect" href="https://upload.wikimedia.org">
 <link rel="preconnect" href="https://ru.wikipedia.org">
@@ -42,7 +44,7 @@
     <p class="hero-description" id="heroDescription">Обои, аватарки и маленькие открытия. Собери свой цифровой стиль из того, что действительно нравится.</p>
     <form class="search-form" id="searchForm" role="search">
       <span class="search-symbol" aria-hidden="true">⌕</span>
-      <input id="searchInput" type="search" placeholder="Аниме, минимализм, ночной город..." autocomplete="off" aria-label="Поиск изображений">
+      <input id="searchInput" type="search" placeholder="Аниме, digital art, pixel art, cyberpunk..." autocomplete="off" aria-label="Поиск обоев и иллюстраций">
       <button type="submit">Найти <span>↗</span></button>
     </form>
     <div class="hero-meta" id="heroMeta"><span><i>✳</i> Без регистрации</span><span><i>↗</i> Открытые источники</span><span><i>♡</i> Своё избранное</span></div>
@@ -72,14 +74,21 @@
     <div class="category-row" id="categoryRow" aria-label="Категории">
       <button class="category-chip is-active" type="button" data-category="all">Все</button>
       <button class="category-chip" type="button" data-category="anime">Аниме</button>
+      <button class="category-chip" type="button" data-category="manga">Манга</button>
+      <button class="category-chip" type="button" data-category="illustration">Иллюстрации</button>
       <button class="category-chip" type="button" data-category="minimal">Минимализм</button>
       <button class="category-chip" type="button" data-category="gaming">Игры</button>
+      <button class="category-chip" type="button" data-category="pixel">Пиксель-арт</button>
       <button class="category-chip" type="button" data-category="cyberpunk">Киберпанк</button>
+      <button class="category-chip" type="button" data-category="lofi">Lo-fi</button>
+      <button class="category-chip" type="button" data-category="synthwave">Synthwave</button>
       <button class="category-chip" type="button" data-category="dark">Тёмные</button>
+      <button class="category-chip" type="button" data-category="retro">Ретро</button>
       <button class="category-chip" type="button" data-category="cars">Авто</button>
       <button class="category-chip" type="button" data-category="space">Космос</button>
       <button class="category-chip" type="button" data-category="nature">Природа</button>
       <button class="category-chip" type="button" data-category="abstract">Абстракция</button>
+      <button class="category-chip" type="button" data-category="horror">Мрачные</button>
     </div>
   </div>
 
@@ -112,7 +121,7 @@
   <p class="fact-disclaimer">Материалы предоставляются Википедией. Текст может быть сокращён для карточки.</p>
 </section>
 
-<section class="source-note" id="sourceNote"><div class="source-icon">ⓘ</div><div><strong>Открытые источники и авторские права</strong><p>Поиск объединяет Wikimedia Commons, Openverse, открытые коллекции Art Institute of Chicago и The Met, а также изображения NASA для космических тем. Источник и условия использования указаны в карточке каждого файла.</p></div><a href="https://commons.wikimedia.org/" target="_blank" rel="noopener noreferrer">Wikimedia Commons ↗</a></section>
+<section class="source-note" id="sourceNote"><div class="source-icon">ⓘ</div><div><strong>Каталоги именно обоев и авторские права</strong><p>Основной поиск идёт по Wallhaven — специализированному каталогу обоев с фильтром SFW. Для аниме-подборок дополнительно используется Waifu.im с отключённым NSFW. Wikimedia Commons и Openverse подключаются как резерв. Безопасный контент не обязательно означает свободную лицензию: проверяй автора и условия на странице оригинала.</p></div><a href="https://wallhaven.cc/" target="_blank" rel="noopener noreferrer">Wallhaven ↗</a></section>
 </main>
 
 <footer class="site-footer"><a class="brand footer-brand" href="./"><span class="brand-symbol"><i></i><i></i><i></i></span><span>WALLORA<span class="brand-dot">.</span></span></a><span>Собери экран под себя.</span><span>© <span id="currentYear"></span> WALLORA</span></footer>
