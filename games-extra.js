@@ -38,4 +38,23 @@ document.addEventListener("keydown",e=>{if(!active("shooter"))return;if(["ArrowL
 document.addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))shooterKeys.left=false;if(["ArrowRight","d","D"].includes(e.key))shooterKeys.right=false;if(e.key===" ")shooterKeys.fire=false});
 function bindHold(id,key){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture?.(e.pointerId);setShooterKey(key,true)});["pointerup","pointercancel","lostpointercapture"].forEach(ev=>b.addEventListener(ev,()=>shooterKeys[key]=false))}
 bindHold("#shooterLeft","left");bindHold("#shooterRight","right");bindHold("#shooterFire","fire");sc.addEventListener("pointermove",e=>{if(!active("shooter"))return;const r=sc.getBoundingClientRect();ship.x=Math.max(20,Math.min(sc.width-20,(e.clientX-r.left)/r.width*sc.width));if(!shooterRunning)drawShooter()});sc.addEventListener("pointerdown",()=>{if(!shooterRunning)startShooter()});resetShooter();
+
+/* Public adapters for the universal autoplay controller. */
+window.MultiGameAPI=window.MultiGameAPI||{};
+window.MultiGameAPI.mines={
+  cells:()=>mineBoard.map(c=>({open:c.open,flag:c.flag,n:c.n})),
+  reveal:revealMine,flag:toggleMineFlag,done:()=>mineOver,
+  restart:newMines
+};
+window.MultiGameAPI.pong={
+  start:startPong,stop(){pongRunning=false;cancelAnimationFrame(pongFrame)},
+  state:()=>({x:pongBall.x,y:pongBall.y,vx:pongBall.vx,vy:pongBall.vy,paddle:pongPaddle,height:pong.height,score:pongPlayer,cpu:pongCPU,running:pongRunning,over:pongPlayer>=7||pongCPU>=7}),
+  control(y){pongPaddle=Math.max(0,Math.min(pong.height-100,y-50));if(!pongRunning)drawPong()}
+};
+window.MultiGameAPI.shooter={
+  start:startShooter,stop(){shooterRunning=false;cancelAnimationFrame(shooterFrame);shooterKeys.left=shooterKeys.right=shooterKeys.fire=false},
+  state:()=>({ship:{...ship},rocks:rocks.map(r=>({...r})),width:sc.width,height:sc.height,lives:shooterLives,running:shooterRunning}),
+  control(keys){shooterKeys.left=!!keys.left;shooterKeys.right=!!keys.right;shooterKeys.fire=keys.fire!==false;if(!shooterRunning)startShooter()}
+};
+
 })();
