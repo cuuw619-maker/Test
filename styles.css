@@ -133,3 +133,23 @@ button:disabled{cursor:not-allowed;filter:saturate(.45);opacity:.58}
 @media(prefers-reduced-motion:reduce){.ai-esp-target,.ai-canvas-cursor{animation:none!important}}
 
 .ai-esp-safe{outline:1px dashed #a8f078!important;outline-offset:-3px;box-shadow:inset 0 0 0 2px #a8f07835!important}.ai-esp-risk{outline:1px dashed #ff6878!important;outline-offset:-3px;box-shadow:inset 0 0 0 2px #ff687825!important}.ai-esp-safe:before,.ai-esp-risk:before{position:absolute;z-index:4;top:2px;right:3px;font:800 8px "DM Sans",sans-serif;pointer-events:none}.ai-esp-safe:before{content:"LOW";color:#a8f078}.ai-esp-risk:before{content:"RISK";color:#ff6878}
+
+/* AI ESP alignment, decision particles and opponent feedback */
+.ai-visual-host{position:relative!important;display:block;width:100%;line-height:0;isolation:isolate}
+.ai-visual-host>canvas{display:block;width:100%;height:auto;max-width:100%}
+.ai-canvas-esp{position:absolute;inset:0;z-index:12;pointer-events:none;overflow:hidden}
+.ai-canvas-cursor{width:20px;height:20px;border:2px solid #b8ff82;background:#b8ff8233;box-shadow:0 0 0 7px #b8ff8222,0 0 24px #b8ff82;animation:aiCursorPulse .62s ease-in-out infinite alternate}
+.ai-canvas-cursor:before{content:"AI";position:absolute;left:13px;top:-14px;padding:3px 5px;border-radius:5px;background:#b8ff82;color:#142014;font:900 8px/1.2 system-ui;white-space:nowrap}
+.ai-esp-danger{border:2px solid #ff6379;background:#ff53602b;box-shadow:0 0 18px #ff526077;animation:aiDangerPulse .8s ease-in-out infinite alternate}
+@keyframes aiDangerPulse{to{opacity:.38;transform:translate(-50%,-50%) scale(1.16)}}
+.ai-particle-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:30}
+.ai-particle{position:absolute;width:5px;height:5px;border-radius:50%;background:#b8ff82;box-shadow:0 0 10px #b8ff82;animation:aiParticleFly .7s cubic-bezier(.15,.7,.25,1) forwards}
+.ai-particle.mint{background:#70e4d0;box-shadow:0 0 11px #70e4d0}
+@keyframes aiParticleFly{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}18%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0)}}
+.ai-opponent-move{animation:aiOpponentPop .34s ease-out}
+.ai-move-flash{position:absolute;inset:8%;border:2px solid #70e4d0;border-radius:12px;pointer-events:none;animation:aiMoveFlash .55s ease-out forwards}
+@keyframes aiOpponentPop{0%{transform:scale(.82);filter:brightness(1.8)}100%{transform:scale(1);filter:brightness(1)}}
+@keyframes aiMoveFlash{0%{opacity:1;transform:scale(.65);box-shadow:0 0 24px #70e4d0}100%{opacity:0;transform:scale(1.22)}}
+.ai-particles-disabled .ai-particle-layer,.ai-particles-disabled .ai-move-flash{display:none!important}
+.autoplay-visual-controls label{user-select:none}
+@media(prefers-reduced-motion:reduce){.ai-particle,.ai-esp-danger,.ai-opponent-move,.ai-move-flash{animation:none!important}}
