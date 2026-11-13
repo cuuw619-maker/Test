@@ -148,13 +148,13 @@ window.MultiGameAPI.ttt={
   step(){if(tttOver){resetTtt();tttMode="two";$$("[data-ttt-mode]").forEach(x=>x.classList.toggle("active",x.dataset.tttMode==="two"))}
     tttMode="two";const mark=tttTurn;let best=-Infinity,move=-1;
     best=mark==="X"?Infinity:-Infinity;for(let i=0;i<9;i++)if(!board[i]){board[i]=mark;const score=minimax(board,0,mark==="X");board[i]="";if((mark==="X"&&score<best)||(mark==="O"&&score>best)){best=score;move=i}}
-    if(move<0)return false;board[move]=mark;const result=winner();tttTurn=mark==="X"?"O":"X";if(result)endTtt(result);else{renderTtt();$("#turnText").textContent="ИИ: ход "+tttTurn;$("#turnSymbol").textContent=tttTurn==="X"?"×":"○"}return true;
+    if(move<0)return false;board[move]=mark;const result=winner();tttTurn=mark==="X"?"O":"X";if(result)endTtt(result);else{renderTtt();$("#turnText").textContent="ИИ: ход "+tttTurn;$("#turnSymbol").textContent=tttTurn==="X"?"×":"○"}return move;
   },done:()=>tttOver,reset(){tttMode="two";resetTtt()}
 };
 window.MultiGameAPI.snake={
   start(interval=76){if(aiTraining)return false;if(snakeRunning)clearInterval(snakeTimer);snakeRunning=false;snakePaused=false;snakeAiMode=true;lastAIState=null;lastAIAction=null;resetSnake();snakeStart();clearInterval(snakeTimer);snakeTimer=setInterval(snakeStep,Math.max(35,Math.min(220,Number(interval)||76)));return true},
   stop(){if(snakeRunning){snakeRunning=false;clearInterval(snakeTimer)}snakeAiMode=false;$("#snakeState").textContent="ИИ ОСТАНОВЛЕН";return true},
-  done:()=>!snakeRunning
+  state:()=>({head:snake.length?{...snake[0]}:null,food:{...food}}),done:()=>!snakeRunning
 };
 window.MultiGameAPI.game2048={board:()=>game2048.board.slice(),move:move2048,done:()=>game2048.over,reset:reset2048};
 window.MultiGameAPI.memory={cards:()=>memoryDeck.slice(),found:()=>new Set(memoryFound),open:flipMemory,done:()=>memoryFound.size===16,reset:resetMemory};
