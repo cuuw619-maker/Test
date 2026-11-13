@@ -1,6 +1,7 @@
 (()=>{"use strict";
 const $=s=>document.querySelector(s);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const MINES_LEFT=15;
 const games=["tictactoe","snake","2048","memory","reaction","mines","pong","shooter"];
 const labels={tictactoe:"Крестики-нолики",snake:"Змейка", "2048":"2048",memory:"Найди пары",reaction:"Тест реакции",mines:"Сапёр",pong:"Понг",shooter:"Космический шутер"};
 let running=false,activeGame=null,timer=0,stepDelay=420,loopToken=0;
@@ -50,8 +51,8 @@ function minesLoop(token){if(!running||token!==loopToken)return;const api=window
  if(safe.size){api.reveal([...safe][0]);schedule(token,()=>minesLoop(token),Math.max(100,stepDelay/2));return}
  const hidden=cells.map((c,i)=>!c.open&&!c.flag?i:-1).filter(i=>i>=0);if(!hidden.length){finish("mines","Все клетки обработаны.");return}
  // If no deterministic deduction exists, select a low-risk cell near the largest number of revealed constraints.
- const risk=new Map(hidden.map(i=>[i,0]));for(let i=0;i<cells.length;i++){if(!cells[i].open||!cells[i].n)continue;const x=i%w,y=Math.floor(i/w);let neighbors=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const nx=x+dx,ny=y+dy;if(nx<0||nx>=w||ny<0||ny>=h)continue;const ni=ny*w+nx;if(!cells[ni].open&&!cells[ni].flag)neighbors.push(ni)}neighbors.forEach(n=>risk.set(n,(risk.get(n)||0)+1/(neighbors.length||1)))}
- const guess=hidden.sort((a,b)=>(risk.get(b)||0)-(risk.get(a)||0))[0];api.reveal(guess);schedule(token,()=>minesLoop(token),stepDelay)
+ const globalRisk=Math.max(0,MINES_LEFT-flags)/hidden.length,risk=new Map(hidden.map(i=>[i,{sum:globalRisk,count:1}]));for(let i=0;i<cells.length;i++){if(!cells[i].open||!cells[i].n)continue;const x=i%w,y=Math.floor(i/w);let neighbors=[],adjacentFlags=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const nx=x+dx,ny=y+dy;if(nx<0||nx>=w||ny<0||ny>=h)continue;const ni=ny*w+nx;if(cells[ni].flag)adjacentFlags++;else if(!cells[ni].open)neighbors.push(ni)}if(!neighbors.length)continue;const probability=Math.max(0,Math.min(1,(cells[i].n-adjacentFlags)/neighbors.length));neighbors.forEach(n=>{const item=risk.get(n);item.sum+=probability;item.count++})}
+ const ranked=hidden.map(i=>({i,score:risk.get(i).sum/risk.get(i).count})),minRisk=Math.min(...ranked.map(x=>x.score)),safest=ranked.filter(x=>x.score<=minRisk+1e-9),guess=safest[Math.floor(Math.random()*safest.length)].i;api.reveal(guess);schedule(token,()=>minesLoop(token),stepDelay)
 }
 function pongLoop(token){if(!running||token!==loopToken)return;const s=window.MultiGameAPI.pong.state();if(s.over){finish("pong",s.score>s.cpu?"ИИ выиграл матч.":"Матч завершён.");return}let target=s.y;if(s.vx<0){const t=(s.x-42)/Math.max(.1,-s.vx),raw=s.y+s.vy*t;const span=s.height-20,period=span*2;let folded=((raw%period)+period)%period;target=folded>span?period-folded:folded}else target=s.height/2;window.MultiGameAPI.pong.control(target);schedule(token,()=>pongLoop(token),stepDelay)}
 function shooterLoop(token){if(!running||token!==loopToken)return;const s=window.MultiGameAPI.shooter.state();if(s.lives<=0){finish("shooter","Корабль уничтожен. ИИ завершил попытку.");return}let danger=0,move=0;for(const r of s.rocks){const dx=r.x-s.ship.x,dy=s.ship.y-r.y;if(dy>-45&&dy<145&&Math.abs(dx)<r.r+42){danger=Math.max(danger,(r.r+42-Math.abs(dx))/(r.r+42));move+=dx>0?1:-1}}const target=move>0?"left":move<0?"right":"";window.MultiGameAPI.shooter.control({left:target==="left",right:target==="right",fire:true});schedule(token,()=>shooterLoop(token),stepDelay)}
