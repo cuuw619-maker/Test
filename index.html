@@ -1,49 +1,136 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#10120f">
-<meta name="description" content="Большая коллекция обоев для рабочего стола и телефона. Ищите, сохраняйте и скачивайте изображения из открытых источников.">
-<title>WALLORA — обои, которые задают настроение</title>
-<link rel="preconnect" href="https://commons.wikimedia.org"><link rel="preconnect" href="https://upload.wikimedia.org">
-<link rel="stylesheet" href="./styles.css"><script src="./app.js" defer></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1018">
+<meta name="description" content="WALLORA — обои, аватарки и случайные открытия из Википедии.">
+<title>WALLORA — твой экран, твой стиль</title>
+<link rel="preconnect" href="https://commons.wikimedia.org">
+<link rel="preconnect" href="https://upload.wikimedia.org">
+<link rel="preconnect" href="https://ru.wikipedia.org">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+<script src="./app.js" defer></script>
 </head>
-<body>
+<body data-theme="dark">
+<canvas id="ambientCanvas" aria-hidden="true"></canvas>
+<div class="site-shell">
 <header class="site-header">
-<a class="brand" href="./" aria-label="WALLORA — главная"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>WALLORA<span class="brand-dot">.</span></span></a>
-<nav class="main-nav" aria-label="Основная навигация"><button class="nav-link is-active" id="homeNav" type="button">Обзор</button><button class="nav-link" id="favoritesNav" type="button">Избранное <span class="nav-count" id="favoriteCount">0</span></button></nav>
-<div class="header-note"><span class="status-dot"></span> Открытая коллекция</div>
+  <a class="brand" href="./" aria-label="WALLORA — главная">
+    <span class="brand-symbol"><i></i><i></i><i></i></span>
+    <span>WALLORA<span class="brand-dot">.</span></span>
+  </a>
+  <nav class="main-nav" aria-label="Разделы сайта">
+    <button class="nav-tab is-active" data-mode="wallpapers" type="button"><span class="nav-icon">▧</span> Обои</button>
+    <button class="nav-tab" data-mode="avatars" type="button"><span class="nav-icon">◉</span> Аватарки</button>
+    <button class="nav-tab" data-mode="facts" type="button"><span class="nav-icon">✳</span> Факты</button>
+  </nav>
+  <div class="header-actions">
+    <button class="header-action favorites-action" id="favoritesNav" type="button" aria-label="Избранное" title="Избранное"><span>♡</span><b id="favoriteCount">0</b></button>
+    <button class="header-action settings-action" id="openSettings" type="button" aria-label="Настройки" title="Настройки"><span>⚙</span></button>
+  </div>
 </header>
+
 <main>
-<section class="hero">
-<div class="hero-copy">
-<div class="eyebrow"><span class="eyebrow-line"></span> DIGITAL WALLPAPER COLLECTION</div>
-<h1>Найди свой<br><em>идеальный фон.</em></h1>
-<p class="hero-description">Тысячи изображений со всего мира — от тихих пейзажей до футуристичных городов. Выбирай настроение для своего экрана.</p>
-<form class="search-form" id="searchForm" role="search"><span class="search-icon" aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Например, горы, космос, архитектура..." autocomplete="off" aria-label="Поиск обоев"><button class="search-button" type="submit">Найти <span aria-hidden="true">↗</span></button></form>
-<div class="hero-meta"><span><span class="meta-symbol">✳</span> Без регистрации</span><span><span class="meta-symbol">↗</span> Бесплатные источники</span><span><span class="meta-symbol">♡</span> Личное избранное</span></div>
-</div>
-<div class="hero-art" aria-label="Подборка природных обоев">
-<div class="hero-image hero-image-back"></div><div class="hero-image hero-image-front"></div>
-<div class="hero-art-label"><span>01 / INSPIRATION</span><span>EVERY PIXEL MATTERS</span></div><div class="hero-orbit" aria-hidden="true">W</div>
-</div><div class="hero-index" aria-hidden="true">W — 001</div>
+<section class="hero" id="hero">
+  <div class="hero-copy">
+    <div class="eyebrow"><span class="eyebrow-line"></span><span id="heroEyebrow">YOUR SCREEN. YOUR VIBE.</span></div>
+    <h1 id="heroTitle">Твой экран.<br><em>Твои правила.</em></h1>
+    <p class="hero-description" id="heroDescription">Обои, аватарки и маленькие открытия. Собери свой цифровой стиль из того, что действительно нравится.</p>
+    <form class="search-form" id="searchForm" role="search">
+      <span class="search-symbol" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Аниме, минимализм, ночной город..." autocomplete="off" aria-label="Поиск изображений">
+      <button type="submit">Найти <span>↗</span></button>
+    </form>
+    <div class="hero-meta" id="heroMeta"><span><i>✳</i> Без регистрации</span><span><i>↗</i> Открытые источники</span><span><i>♡</i> Своё избранное</span></div>
+  </div>
+  <div class="hero-visual" id="heroVisual" aria-hidden="true">
+    <div class="visual-glow"></div>
+    <div class="visual-card visual-card-back"></div>
+    <div class="visual-card visual-card-mid"></div>
+    <div class="visual-card visual-card-front"><span>MAKE IT YOURS</span><b>W.</b></div>
+    <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
+    <span class="visual-caption">COLLECTION / 2026</span>
+  </div>
+  <span class="hero-coordinate" aria-hidden="true">WL—001 / DIGITAL SPACE</span>
 </section>
+
 <section class="collection-section" id="collection">
-<div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> EXPLORE THE COLLECTION</div><h2 id="sectionTitle">Свежая коллекция<span class="title-period">.</span></h2><p class="section-subtitle" id="sectionSubtitle">Подборка изображений из открытой медиатеки Wikimedia Commons.</p></div><div class="result-indicator"><span class="result-dot"></span><span id="resultStatus">Загрузка коллекции</span></div></div>
-<div class="category-row" id="categoryRow" aria-label="Категории обоев">
-<button class="category-chip is-active" type="button" data-category="all">Все обои <span>✳</span></button><button class="category-chip" type="button" data-category="nature">Природа</button><button class="category-chip" type="button" data-category="space">Космос</button><button class="category-chip" type="button" data-category="architecture">Архитектура</button><button class="category-chip" type="button" data-category="cars">Автомобили</button><button class="category-chip" type="button" data-category="ocean">Океан</button><button class="category-chip" type="button" data-category="minimal">Минимализм</button><button class="category-chip" type="button" data-category="animals">Животные</button>
-</div>
-<div class="toolbar"><div class="toolbar-left"><span class="toolbar-label">ПОКАЗАТЬ</span><select id="orientationFilter" aria-label="Ориентация изображения"><option value="all">Все форматы</option><option value="landscape">Альбомные</option><option value="portrait">Портретные</option><option value="square">Квадратные</option></select><span class="toolbar-divider"></span><select id="sortSelect" aria-label="Сортировка"><option value="relevance">По релевантности</option><option value="resolution">Высокое разрешение</option><option value="title">По названию</option><option value="random">Случайный порядок</option></select></div><div class="toolbar-right"><span id="visibleCount">0 изображений</span><span class="view-indicator" aria-hidden="true">▦</span></div></div>
-<div class="wallpaper-grid" id="wallpaperGrid" aria-live="polite"><div class="loading-state"><span class="loader"></span><p>Собираем изображения...</p></div></div>
-<div class="empty-state" id="emptyState" hidden><span class="empty-symbol">⌕</span><h3 id="emptyTitle">Ничего не найдено</h3><p id="emptyDescription">Попробуйте изменить запрос или выбрать другую категорию.</p><button class="text-button" id="resetButton" type="button">Сбросить фильтры <span>↗</span></button></div>
-<div class="load-more-wrap" id="loadMoreWrap"><button class="load-more-button" id="loadMoreButton" type="button">Показать ещё <span>↓</span></button><p>Изображения загружаются из открытой библиотеки по мере просмотра</p></div>
+  <div class="section-heading">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span><span id="sectionEyebrow">FIND YOUR STYLE</span></div>
+      <h2 id="sectionTitle">Подбери настроение<span class="title-period">.</span></h2>
+      <p class="section-subtitle" id="sectionSubtitle">Выбери направление — мы соберём подходящую подборку.</p>
+    </div>
+    <div class="result-indicator" id="resultIndicator"><span class="result-dot"></span><span id="resultStatus">Открытая медиатека</span></div>
+  </div>
+
+  <div class="category-area" id="categoryArea">
+    <div class="category-label">НАПРАВЛЕНИЯ</div>
+    <div class="category-row" id="categoryRow" aria-label="Категории">
+      <button class="category-chip is-active" type="button" data-category="all">Все</button>
+      <button class="category-chip" type="button" data-category="anime">Аниме</button>
+      <button class="category-chip" type="button" data-category="minimal">Минимализм</button>
+      <button class="category-chip" type="button" data-category="gaming">Игры</button>
+      <button class="category-chip" type="button" data-category="cyberpunk">Киберпанк</button>
+      <button class="category-chip" type="button" data-category="dark">Тёмные</button>
+      <button class="category-chip" type="button" data-category="cars">Авто</button>
+      <button class="category-chip" type="button" data-category="space">Космос</button>
+      <button class="category-chip" type="button" data-category="nature">Природа</button>
+      <button class="category-chip" type="button" data-category="abstract">Абстракция</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="toolbar-label">ФИЛЬТРЫ</span>
+      <select id="orientationFilter" aria-label="Формат"><option value="all">Любой формат</option><option value="landscape">Для ПК</option><option value="portrait">Для телефона</option><option value="square">Квадратные</option></select>
+      <span class="toolbar-divider"></span>
+      <select id="sortSelect" aria-label="Сортировка"><option value="relevance">По релевантности</option><option value="resolution">Высокое разрешение</option><option value="title">По названию</option><option value="random">Перемешать</option></select>
+    </div>
+    <div class="toolbar-right"><span id="visibleCount">0 изображений</span><span class="view-indicator">▦</span></div>
+  </div>
+
+  <div class="wallpaper-grid" id="wallpaperGrid" aria-live="polite"><div class="loading-state"><span class="loader"></span><p>Подбираем изображения...</p></div></div>
+  <div class="empty-state" id="emptyState" hidden><span class="empty-symbol">⌕</span><h3 id="emptyTitle">Ничего не найдено</h3><p id="emptyDescription">Попробуй другой запрос или категорию.</p><button class="text-button" id="resetButton" type="button">Сбросить фильтры <span>↗</span></button></div>
+  <div class="load-more-wrap" id="loadMoreWrap"><button class="load-more-button" id="loadMoreButton" type="button">Показать ещё <span>↓</span></button><p>Новые изображения подгружаются по мере просмотра</p></div>
 </section>
-<section class="source-note"><div class="source-icon">ⓘ</div><div><strong>Изображения из открытых источников</strong><p>Файлы загружаются напрямую с Wikimedia Commons. Условия лицензии и сведения об авторе доступны в карточке каждого изображения. Права на изображения принадлежат их авторам.</p></div><a href="https://commons.wikimedia.org/" target="_blank" rel="noopener noreferrer">О библиотеке <span>↗</span></a></section>
+
+<section class="facts-section" id="factsSection" hidden>
+  <div class="facts-intro"><div class="eyebrow"><span class="eyebrow-line"></span> WIKIPEDIA RANDOM DISCOVERY</div><h2>Одно нажатие.<br><em>Новое открытие.</em></h2><p>Случайная статья из русской Википедии. Иногда это история, иногда наука, искусство или что-то совершенно неожиданное.</p></div>
+  <article class="fact-card" id="factCard" aria-live="polite">
+    <div class="fact-loading" id="factLoading"><span class="loader"></span><span>Ищем случайную статью...</span></div>
+    <div class="fact-content" id="factContent" hidden>
+      <div class="fact-image-wrap" id="factImageWrap" hidden><img id="factImage" alt=""></div>
+      <div class="fact-copy"><div class="fact-kicker"><span class="result-dot"></span> СЛУЧАЙНАЯ СТАТЬЯ</div><h3 id="factTitle">Загрузка...</h3><p id="factExtract"></p><div class="fact-footer"><span id="factCategory">Википедия · Русский язык</span><a id="factSource" href="https://ru.wikipedia.org/" target="_blank" rel="noopener noreferrer">Читать статью ↗</a></div></div>
+    </div>
+    <div class="fact-error" id="factError" hidden>Не удалось получить статью. Проверь подключение и попробуй ещё раз.</div>
+  </article>
+  <button class="random-fact-button" id="randomFactButton" type="button"><span class="random-icon">⟳</span> Другая случайная статья <span>↗</span></button>
+  <p class="fact-disclaimer">Материалы предоставляются Википедией. Текст может быть сокращён для карточки.</p>
+</section>
+
+<section class="source-note" id="sourceNote"><div class="source-icon">ⓘ</div><div><strong>Открытые источники и авторские права</strong><p>Изображения загружаются из Wikimedia Commons. Лицензия и автор указаны в карточке каждого файла. Перед повторным использованием проверяй условия конкретной лицензии.</p></div><a href="https://commons.wikimedia.org/" target="_blank" rel="noopener noreferrer">Wikimedia Commons ↗</a></section>
 </main>
-<footer class="site-footer"><a class="brand footer-brand" href="./"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>WALLORA<span class="brand-dot">.</span></span></a><span>Собери экран под себя.</span><span>© <span id="currentYear"></span> WALLORA</span></footer>
+
+<footer class="site-footer"><a class="brand footer-brand" href="./"><span class="brand-symbol"><i></i><i></i><i></i></span><span>WALLORA<span class="brand-dot">.</span></span></a><span>Собери экран под себя.</span><span>© <span id="currentYear"></span> WALLORA</span></footer>
+</div>
+
 <div class="modal" id="imageModal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-<button class="modal-backdrop" id="modalBackdrop" type="button" aria-label="Закрыть просмотр"></button><div class="modal-panel"><button class="modal-close" id="modalClose" type="button" aria-label="Закрыть">×</button>
-<div class="modal-image-wrap"><img id="modalImage" alt=""></div>
+<button class="modal-backdrop" id="modalBackdrop" type="button" aria-label="Закрыть просмотр"></button>
+<div class="modal-panel"><button class="modal-close" id="modalClose" type="button" aria-label="Закрыть">×</button><div class="modal-image-wrap"><img id="modalImage" alt=""></div>
 <div class="modal-details"><div class="modal-heading"><div><div class="eyebrow">WALLPAPER DETAILS</div><h2 id="modalTitle">Изображение</h2></div><button class="modal-favorite" id="modalFavorite" type="button" aria-label="Добавить в избранное">♡</button></div>
-<div class="modal-facts" id="modalFacts"></div><p class="modal-credit" id="modalCredit"></p><div class="modal-actions"><a class="download-button" id="downloadLink" href="#" target="_blank" rel="noopener noreferrer">Открыть оригинал <span>↗</span></a><a class="source-button" id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Страница источника</a></div><p class="license-note" id="licenseNote"></p></div>
-</div></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-</body></html>
+<div class="modal-facts" id="modalFacts"></div><p class="modal-credit" id="modalCredit"></p><div class="modal-actions"><a class="download-button" id="downloadLink" href="#" target="_blank" rel="noopener noreferrer">Открыть оригинал ↗</a><a class="source-button" id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Страница источника</a></div><p class="license-note" id="licenseNote"></p></div></div></div>
+
+<div class="modal settings-modal" id="settingsModal" hidden role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+<button class="modal-backdrop" id="settingsBackdrop" type="button" aria-label="Закрыть настройки"></button>
+<div class="settings-panel"><div class="settings-head"><div><div class="eyebrow">PERSONALIZE YOUR SPACE</div><h2 id="settingsTitle">Настройки</h2></div><button class="modal-close" id="settingsClose" type="button" aria-label="Закрыть">×</button></div>
+<div class="settings-group"><div><strong>Оформление</strong><p>Выбери внешний вид сайта</p></div><div class="theme-options" role="group" aria-label="Тема"><button type="button" data-theme-choice="dark" class="theme-choice is-active"><span>◐</span> Тёмная</button><button type="button" data-theme-choice="light" class="theme-choice"><span>☼</span> Светлая</button><button type="button" data-theme-choice="system" class="theme-choice"><span>◑</span> Системная</button></div></div>
+<div class="settings-group"><div><strong>Визуальные эффекты</strong><p>Настрой динамику интерфейса</p></div><label class="toggle-row"><span><b>Частицы</b><small>Плавающие точки на фоне</small></span><input id="particlesToggle" type="checkbox" checked><i></i></label><label class="toggle-row"><span><b>Анимации</b><small>Плавные переходы и появления</small></span><input id="motionToggle" type="checkbox" checked><i></i></label><label class="toggle-row"><span><b>3D-эффекты</b><small>Небольшой наклон карточек</small></span><input id="tiltToggle" type="checkbox" checked><i></i></label></div>
+<div class="settings-foot"><span>Настройки сохраняются на этом устройстве.</span><button id="resetSettings" type="button">Сбросить</button></div></div></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
