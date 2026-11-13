@@ -141,4 +141,23 @@ let reactionState="idle",reactionTimer=0,reactionStart=0,reactionBest=Number(loc
 function resetReaction(){clearTimeout(reactionTimer);reactionState="idle";$("#reactionZone").className="reaction-zone idle";$("#reactionIcon").textContent="ϟ";$("#reactionTitle").textContent="Проверь реакцию";$("#reactionHint").textContent="Нажми, чтобы начать. Затем жди зелёный сигнал."}
 $("#reactionZone").addEventListener("click",()=>{const z=$("#reactionZone");if(reactionState==="idle"){reactionState="waiting";z.className="reaction-zone waiting";$("#reactionIcon").textContent="…";$("#reactionTitle").textContent="Жди зелёный сигнал";$("#reactionHint").textContent="Не нажимай раньше времени.";reactionTimer=setTimeout(()=>{if(reactionState!=="waiting")return;reactionState="ready";reactionStart=performance.now();z.className="reaction-zone ready";$("#reactionIcon").textContent="GO";$("#reactionTitle").textContent="ЖМИ!";$("#reactionHint").textContent="Нажми сейчас!"},1200+Math.random()*3200)}else if(reactionState==="waiting"){clearTimeout(reactionTimer);reactionState="early";z.className="reaction-zone early";$("#reactionIcon").textContent="×";$("#reactionTitle").textContent="Слишком рано";$("#reactionHint").textContent="Нажми ещё раз для новой попытки."}else if(reactionState==="ready"){const ms=Math.round(performance.now()-reactionStart);reactionState="result";z.className="reaction-zone result";$("#reactionIcon").textContent=ms+" ms";$("#reactionTitle").textContent=ms<220?"Молниеносно!":ms<320?"Хорошая реакция":"Можно быстрее";$("#reactionHint").textContent="Нажми, чтобы попробовать ещё раз.";$("#reactionLast").textContent=ms+" мс";if(!reactionBest||ms<reactionBest){reactionBest=ms;localStorage.setItem("mt-reaction-best",ms);$("#reactionBest").textContent=ms+" мс"}beep(680,.1)}else resetReaction()});
 
+
+/* Public adapters used by the universal autoplay controller. */
+window.MultiGameAPI=window.MultiGameAPI||{};
+window.MultiGameAPI.ttt={
+  step(){if(tttOver){resetTtt();tttMode="two";$$("[data-ttt-mode]").forEach(x=>x.classList.toggle("active",x.dataset.tttMode==="two"))}
+    tttMode="two";const mark=tttTurn;let best=-Infinity,move=-1;
+    for(let i=0;i<9;i++)if(!board[i]){board[i]=mark;const score=minimax(board,0,mark==="X");board[i]="";if((mark==="X"&&score>best)||(mark==="O"&&score>best)){best=score;move=i}}
+    if(move<0)return false;board[move]=mark;const result=winner();tttTurn=mark==="X"?"O":"X";if(result)endTtt(result);else{renderTtt();$("#turnText").textContent="ИИ: ход "+tttTurn;$("#turnSymbol").textContent=tttTurn==="X"?"×":"○"}return true;
+  },done:()=>tttOver
+};
+window.MultiGameAPI.snake={
+  start(){if(aiTraining)return false;if(snakeRunning)clearInterval(snakeTimer);snakeRunning=false;snakePaused=false;snakeAiMode=true;lastAIState=null;lastAIAction=null;resetSnake();snakeStart();return true},
+  stop(){if(snakeRunning){snakeRunning=false;clearInterval(snakeTimer)}snakeAiMode=false;$("#snakeState").textContent="ИИ ОСТАНОВЛЕН";return true},
+  done:()=>!snakeRunning&&snakeScore>0
+};
+window.MultiGameAPI.game2048={board:()=>game2048.board.slice(),move:move2048,done:()=>game2048.over};
+window.MultiGameAPI.memory={cards:()=>memoryDeck.slice(),found:()=>new Set(memoryFound),open:flipMemory,done:()=>memoryFound.size===16};
+window.MultiGameAPI.reaction={reset:resetReaction};
+
 })();
