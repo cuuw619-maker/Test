@@ -121,6 +121,34 @@ function normalizeArtic(item){
  const title=cleanText(item.title||"Artwork");
  return{id:"artic:"+String(item.id),title,thumb:"https://www.artic.edu/iiif/2/"+encodeURIComponent(id)+"/full/843,/0/default.jpg",original:"https://www.artic.edu/iiif/2/"+encodeURIComponent(id)+"/full/2000,/0/default.jpg",pageUrl:"https://www.artic.edu/artworks/"+item.id,width:0,height:0,mime:"image/jpeg",artist:cleanText(item.artist_display||"Art Institute of Chicago"),license:"Public Domain · Open Access",source:"Art Institute of Chicago"};
 }
+function metQuery(){
+ const q=(state.query+" "+state.category).toLowerCase();
+ if(/anime|japan|avatar|pixel/.test(q))return "Japanese";
+ if(/car|auto/.test(q))return "automobile";
+ if(/space|galaxy|nebula/.test(q))return "space";
+ if(/nature|mountain|forest|ocean/.test(q))return "landscape";
+ if(/city|cyberpunk|gaming|game/.test(q))return "fantasy";
+ if(/minimal|abstract|dark/.test(q))return "abstract";
+ return "illustration";
+}
+function normalizeMet(item){
+ if(!item||item.isPublicDomain!==true||!item.primaryImage)return null;
+ return{id:"met:"+String(item.objectID),title:cleanText(item.title||"Museum artwork"),thumb:item.primaryImageSmall||item.primaryImage,original:item.primaryImage,pageUrl:item.objectURL||"https://www.metmuseum.org/art/collection",width:0,height:0,mime:"image/jpeg",artist:cleanText(item.artistDisplayName||"The Metropolitan Museum of Art"),license:"Public Domain · Open Access",source:"The Metropolitan Museum of Art"};
+}
+async function fetchMetPage(offset){
+ const searchParams=new URLSearchParams({hasImages:"true",isPublicDomain:"true",q:metQuery()});
+ const searchResponse=await fetch("https://collectionapi.metmuseum.org/public/collection/v1/search?"+searchParams.toString());
+ if(!searchResponse.ok)throw new Error("The Met "+searchResponse.status);
+ const searchData=await searchResponse.json(),ids=searchData.objectIDs||[],start=Number(offset)||0,batch=ids.slice(start,start+6);
+ const objects=await Promise.allSettled(batch.map(async id=>{
+  const response=await fetch("https://collectionapi.metmuseum.org/public/collection/v1/objects/"+id);
+  if(!response.ok)throw new Error("The Met object "+response.status);
+  return response.json();
+ }));
+ const items=objects.filter(result=>result.status==="fulfilled").map(result=>normalizeMet(result.value)).filter(Boolean);
+ const next=start+batch.length<ids.length?start+batch.length:null;
+ return{provider:"The Metropolitan Museum of Art",items,next};
+}
 function shouldLoadNasa(){
  return /space|galaxy|nebula|planet|cosmos|космос|планет/i.test(state.query+" "+state.category);
 }
@@ -159,8 +187,8 @@ async function fetchNasaPage(page){
 }
 async function loadWallpapers(append=false){
  if(append&&state.loading)return;
- const currentCursor=append?(state.continuation||{}):{commons:null,openverse:null,artic:1,nasa:1};
- if(append&&!currentCursor.commons&&!currentCursor.openverse&&!currentCursor.artic&&!currentCursor.nasa)return;
+ const currentCursor=append?(state.continuation||{}):{commons:null,openverse:null,artic:1,nasa:1,met:0};
+ if(append&&!currentCursor.commons&&!currentCursor.openverse&&!currentCursor.artic&&!currentCursor.nasa&&(currentCursor.met===null||currentCursor.met===undefined))return;
  const requestId=++state.requestId;state.loading=true;el.loadMore.disabled=true;el.loadMore.textContent="Собираем...";
  if(!append){state.items=[];el.grid.innerHTML='<div class="loading-state"><span class="loader"></span><p>Ищем изображения в нескольких библиотеках...</p></div>';el.empty.hidden=true;el.loadMoreWrap.hidden=true}
  const tasks=[];
@@ -168,6 +196,7 @@ async function loadWallpapers(append=false){
  if(!append||currentCursor.openverse)tasks.push(fetchOpenversePage(currentCursor.openverse));
  if(!append||currentCursor.artic)tasks.push(fetchArticPage(currentCursor.artic||1));
  if(shouldLoadNasa()&&(!append||currentCursor.nasa))tasks.push(fetchNasaPage(currentCursor.nasa||1));
+ if(!append||(currentCursor.met!==null&&currentCursor.met!==undefined))tasks.push(fetchMetPage(currentCursor.met||0));
  const results=await Promise.all(tasks.map(async task=>{try{return await task}catch(error){return{provider:"Неизвестный источник",items:[],next:null,error}}}));
  if(requestId!==state.requestId)return;
  const failed=results.filter(result=>result.error);
@@ -183,7 +212,8 @@ async function loadWallpapers(append=false){
   commons:successful.find(x=>x.provider==="Wikimedia Commons")?.next||null,
   openverse:successful.find(x=>x.provider==="Openverse")?.next||null,
   artic:successful.find(x=>x.provider==="Art Institute of Chicago")?.next||null,
-  nasa:successful.find(x=>x.provider==="NASA Image and Video Library")?.next||null
+  nasa:successful.find(x=>x.provider==="NASA Image and Video Library")?.next||null,
+  met:successful.find(x=>x.provider==="The Metropolitan Museum of Art")?.next??null
  };
  const hasMore=Object.values(state.continuation).some(Boolean);
  state.loading=false;renderGrid();
