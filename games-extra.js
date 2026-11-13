@@ -48,7 +48,7 @@ window.MultiGameAPI.mines={
 };
 window.MultiGameAPI.pong={
   start:startPong,stop(){pongRunning=false;cancelAnimationFrame(pongFrame)},
-  state:()=>({x:pongBall.x,y:pongBall.y,vx:pongBall.vx,vy:pongBall.vy,paddle:pongPaddle,height:pong.height,score:pongPlayer,cpu:pongCPU,running:pongRunning,over:pongPlayer>=7||pongCPU>=7}),
+  state:()=>({x:pongBall.x,y:pongBall.y,vx:pongBall.vx,vy:pongBall.vy,paddle:pongPaddle,height:pong.height,score:pongPlayer,cpu:pongCPU,running:pongRunning,over:pongPlayer>=7||pongCPU>=7}),reset:resetPong,
   control(y){pongPaddle=Math.max(0,Math.min(pong.height-100,y-50));if(!pongRunning)drawPong()}
 };
 window.MultiGameAPI.shooter={

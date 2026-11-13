@@ -10,7 +10,7 @@ function persist(){Object.assign(settings,{sound:soundOn,weatherSound:weatherSou
 function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2400)}
 function beep(freq=440,duration=.09,type="sine",volume=.035){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch{}}
 function applyPrefs(){document.body.dataset.theme=theme==="system"?(matchMedia("(prefers-color-scheme:light)").matches?"light":"dark"):theme;document.body.classList.toggle("reduce-motion",reduceMotion);$("#soundIcon").textContent=soundOn?"♫":"♩";$("#soundToggle").setAttribute("aria-label",soundOn?"Выключить звук":"Включить звук");$("#prefSound").checked=soundOn;$("#prefWeatherSound").checked=weatherSoundOn;$("#prefParticles").checked=particlesOn;$("#prefMotion").checked=reduceMotion;$("#prefTheme").value=theme;if(!particlesOn)clearAtmosphere();else drawAtmosphere()}
-function openPage(name){const page=$("#page-"+name);if(!page||page.classList.contains("active"))return;if(window.MultiCore)MultiCore.navigate(name);else{$(".page").forEach(p=>p.classList.remove("active","page-leaving"));page.classList.add("active");$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===name));}$("#headerStatus").textContent=({home:"ВСЁ ДЛЯ ТВОЕГО МОМЕНТА",roulette:"LET THE WHEEL DECIDE",tictactoe:"THINK BEFORE YOU MOVE",snake:"CLASSIC ARCADE",weather:"WEATHER AROUND YOU","2048":"NUMBER PUZZLE",memory:"MEMORY CHALLENGE",reaction:"REFLEX LAB"})[name];if(name==="weather"){setTimeout(()=>{initMap();if(map)map.invalidateSize()},120)}window.scrollTo({top:0,behavior:"instant"});beep(360,.045,"sine",.018)}
+function openPage(name){const page=$("#page-"+name);if(!page||page.classList.contains("active"))return;if(window.MultiCore)window.MultiCore.navigate(name);else{$(".page").forEach(p=>p.classList.remove("active","page-leaving"));page.classList.add("active");$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===name));}$("#headerStatus").textContent=({home:"ВСЁ ДЛЯ ТВОЕГО МОМЕНТА",roulette:"LET THE WHEEL DECIDE",tictactoe:"THINK BEFORE YOU MOVE",snake:"CLASSIC ARCADE",weather:"WEATHER AROUND YOU","2048":"NUMBER PUZZLE",memory:"MEMORY CHALLENGE",reaction:"REFLEX LAB",mines:"MINESWEEPER",pong:"ARCADE PONG",shooter:"SPACE DEFENDER"})[name]||"MULTITOOL";if(name==="weather"){setTimeout(()=>{initMap();if(map)map.invalidateSize()},120)}window.scrollTo({top:0,behavior:"instant"});beep(360,.045,"sine",.018)}
 $$("[data-page]").forEach(b=>b.addEventListener("click",()=>openPage(b.dataset.page)));
 $$("[data-open]").forEach(b=>b.addEventListener("click",()=>openPage(b.dataset.open)));
 $("#themeToggle").addEventListener("click",()=>{theme=theme==="light"?"dark":"light";applyPrefs();persist();beep(520)});
@@ -149,15 +149,15 @@ window.MultiGameAPI.ttt={
     tttMode="two";const mark=tttTurn;let best=-Infinity,move=-1;
     best=mark==="X"?Infinity:-Infinity;for(let i=0;i<9;i++)if(!board[i]){board[i]=mark;const score=minimax(board,0,mark==="X");board[i]="";if((mark==="X"&&score<best)||(mark==="O"&&score>best)){best=score;move=i}}
     if(move<0)return false;board[move]=mark;const result=winner();tttTurn=mark==="X"?"O":"X";if(result)endTtt(result);else{renderTtt();$("#turnText").textContent="ИИ: ход "+tttTurn;$("#turnSymbol").textContent=tttTurn==="X"?"×":"○"}return true;
-  },done:()=>tttOver
+  },done:()=>tttOver,reset(){tttMode="two";resetTtt()}
 };
 window.MultiGameAPI.snake={
   start(interval=76){if(aiTraining)return false;if(snakeRunning)clearInterval(snakeTimer);snakeRunning=false;snakePaused=false;snakeAiMode=true;lastAIState=null;lastAIAction=null;resetSnake();snakeStart();clearInterval(snakeTimer);snakeTimer=setInterval(snakeStep,Math.max(35,Math.min(220,Number(interval)||76)));return true},
   stop(){if(snakeRunning){snakeRunning=false;clearInterval(snakeTimer)}snakeAiMode=false;$("#snakeState").textContent="ИИ ОСТАНОВЛЕН";return true},
-  done:()=>!snakeRunning&&snakeScore>0
+  done:()=>!snakeRunning
 };
-window.MultiGameAPI.game2048={board:()=>game2048.board.slice(),move:move2048,done:()=>game2048.over};
-window.MultiGameAPI.memory={cards:()=>memoryDeck.slice(),found:()=>new Set(memoryFound),open:flipMemory,done:()=>memoryFound.size===16};
+window.MultiGameAPI.game2048={board:()=>game2048.board.slice(),move:move2048,done:()=>game2048.over,reset:reset2048};
+window.MultiGameAPI.memory={cards:()=>memoryDeck.slice(),found:()=>new Set(memoryFound),open:flipMemory,done:()=>memoryFound.size===16,reset:resetMemory};
 window.MultiGameAPI.reaction={reset:resetReaction};
 
 })();
