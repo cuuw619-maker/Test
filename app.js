@@ -121,7 +121,6 @@ window.addEventListener("resize",()=>{if(particlesOn){resizeAtmosphere();if(raf)
 document.addEventListener("visibilitychange",()=>{if(document.hidden){if(raf){cancelAnimationFrame(raf);raf=0}}else if(particlesOn)drawAtmosphere()});
 if(matchMedia){matchMedia("(prefers-color-scheme:light)").addEventListener?.("change",()=>{if(theme==="system")applyPrefs()})}
 applyPrefs();drawAtmosphere();
-})();
 
 /* 2048 */
 const game2048={board:Array(16).fill(0),score:0,best:Number(localStorage.getItem("mt-2048-best")||0),over:false};
