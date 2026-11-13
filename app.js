@@ -19,7 +19,7 @@ $("#settingsButton").addEventListener("click",()=>$("#settingsModal").hidden=fal
 $("#settingsClose").addEventListener("click",()=>$("#settingsModal").hidden=true);
 $("#settingsBackdrop").addEventListener("click",()=>$("#settingsModal").hidden=true);
 $("#prefSound").addEventListener("change",e=>{soundOn=e.target.checked;applyPrefs();persist();beep(500)});
-$("#prefParticles").addEventListener("change",e=>{particlesOn=e.target.checked;applyPrefs();persist()});$("#prefWeatherSound").addEventListener("change",e=>{weatherSoundOn=e.target.checked;persist();updateWeatherSound();if(weatherSoundOn)beep(520)});
+$("#prefParticles").addEventListener("change",e=>{particlesOn=e.target.checked;applyPrefs();persist()});$("#prefWeatherSound").addEventListener("change",e=>{weatherSoundOn=e.target.checked;persist();if(weatherSoundOn)beep(520);updateWeatherSound()});
 $("#prefMotion").addEventListener("change",e=>{reduceMotion=e.target.checked;applyPrefs();persist()});
 $("#prefTheme").addEventListener("change",e=>{theme=e.target.value;applyPrefs();persist()});
 $("#year").textContent=new Date().getFullYear();
