@@ -148,7 +148,7 @@ window.MultiGameAPI.ttt={
   step(){if(tttOver){resetTtt();tttMode="two";$$("[data-ttt-mode]").forEach(x=>x.classList.toggle("active",x.dataset.tttMode==="two"))}
     tttMode="two";const mark=tttTurn;let best=-Infinity,move=-1;
     best=mark==="X"?Infinity:-Infinity;for(let i=0;i<9;i++)if(!board[i]){board[i]=mark;const score=minimax(board,0,mark==="X");board[i]="";if((mark==="X"&&score<best)||(mark==="O"&&score>best)){best=score;move=i}}
-    if(move<0)return false;board[move]=mark;const result=winner();tttTurn=mark==="X"?"O":"X";if(result)endTtt(result);else{renderTtt();$("#turnText").textContent="ИИ: ход "+tttTurn;$("#turnSymbol").textContent=tttTurn==="X"?"×":"○"}return true;
+    if(move<0)return false;board[move]=mark;const result=winner();tttTurn=mark==="X"?"O":"X";if(result)endTtt(result);else{renderTtt();$("#turnText").textContent="ИИ: ход "+tttTurn;$("#turnSymbol").textContent=tttTurn==="X"?"×":"○"}return move;
   },done:()=>tttOver,reset(){tttMode="two";resetTtt()}
 };
 window.MultiGameAPI.snake={
