@@ -100,7 +100,7 @@ function openverseQuery(){
 }
 function articQuery(){
  const q=(state.query+" "+state.category).toLowerCase();
- if(/anime|japan|pixel|avatar/.test(q))return "Japanese art print";
+ if(/anime|manga|japan|pixel|avatar/.test(q))return "Japanese art print";
  if(/car|auto/.test(q))return "automobile";
  if(/space|galaxy|nebula/.test(q))return "abstract art";
  if(/nature|mountain|forest|ocean/.test(q))return "landscape";
@@ -345,7 +345,7 @@ function setupEvents(){
  el.searchForm.addEventListener("submit",event=>{event.preventDefault();const q=el.searchInput.value.trim();if(!q){chooseCategory("all");return}state.category="search";state.query=q;state.view="all";state.continuation=null;el.categoryRow.querySelectorAll(".category-chip").forEach(b=>b.classList.remove("is-active"));loadWallpapers(false)});
  el.categoryRow.addEventListener("click",event=>{const button=event.target.closest("[data-category]");if(button)chooseCategory(button.dataset.category)});
  el.orientation.addEventListener("change",()=>{state.orientation=el.orientation.value;renderGrid()});el.sort.addEventListener("change",()=>{state.sort=el.sort.value;renderGrid()});
- el.loadMore.addEventListener("click",()=>state.continuation?loadWallpapers(true):loadWallpapers(false));
+ el.loadMore.addEventListener("click",()=>{const canContinue=state.continuation&&Object.values(state.continuation).some(Boolean);loadWallpapers(Boolean(canContinue))});
  el.homeModes.forEach(button=>button.addEventListener("click",()=>switchMode(button.dataset.mode)));
  el.favoritesNav.addEventListener("click",()=>{state.view="favorites";el.homeModes.forEach(b=>b.classList.remove("is-active"));renderGrid();el.collection.scrollIntoView({behavior:"smooth",block:"start"})});
  el.modalClose.addEventListener("click",closeImage);$("#modalBackdrop").addEventListener("click",closeImage);el.modalFavorite.addEventListener("click",()=>{if(state.activeItem)toggleFavorite(state.activeItem)});
