@@ -15,6 +15,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="./core.js" defer></script>
 <script src="./app.js" defer></script>
+<script src="./games-extra.js" defer></script>
 </head>
 <body data-theme="dark">
 <canvas id="atmosphere" aria-hidden="true"></canvas>
@@ -40,6 +41,9 @@
     <button class="nav-item" data-page="2048"><span class="nav-glyph">▦</span><span>2048</span><kbd>05</kbd></button>
     <button class="nav-item" data-page="memory"><span class="nav-glyph">▣</span><span>Память</span><kbd>06</kbd></button>
     <button class="nav-item" data-page="reaction"><span class="nav-glyph">ϟ</span><span>Реакция</span><kbd>07</kbd></button>
+    <button class="nav-item" data-page="mines"><span class="nav-glyph">✹</span><span>Сапёр</span><kbd>08</kbd></button>
+    <button class="nav-item" data-page="pong"><span class="nav-glyph">▥</span><span>Понг</span><kbd>09</kbd></button>
+    <button class="nav-item" data-page="shooter"><span class="nav-glyph">✦</span><span>Космический шутер</span><kbd>10</kbd></button>
     <button class="nav-item" data-page="weather"><span class="nav-glyph">☼</span><span>Погода</span><kbd>08</kbd></button>
     <div class="sidebar-bottom"><div class="side-mini-orbit"><span></span><i></i></div><p>Один сайт.<br><b>Много возможностей.</b></p><small>BUILT FOR EVERY SCREEN</small></div>
   </aside>
@@ -59,7 +63,7 @@
           <div class="art-caption">INTERACTIVE / 2026</div>
         </div>
       </div>
-      <div class="section-head"><div><div class="eyebrow">CHOOSE YOUR MODE</div><h2>Что будем делать<span class="accent">?</span></h2></div><span class="section-count">07 MODULES</span></div>
+      <div class="section-head"><div><div class="eyebrow">CHOOSE YOUR MODE</div><h2>Что будем делать<span class="accent">?</span></h2></div><span class="section-count">10 MODULES</span></div>
       <div class="tool-grid">        <button class="tool-card" data-open="2048"><span class="tool-index">05 / PUZZLE</span><span class="tool-icon">▦</span><strong>2048</strong><p>Соединяй одинаковые числа и собери плитку 2048.</p><span class="tool-link">Играть <b>↗</b></span></button>
         <button class="tool-card" data-open="memory"><span class="tool-index">06 / MEMORY</span><span class="tool-icon">▣</span><strong>Найди пары</strong><p>Открывай карточки, запоминай символы и находи совпадения.</p><span class="tool-link">Играть <b>↗</b></span></button>
         <button class="tool-card" data-open="reaction"><span class="tool-index">07 / REFLEX</span><span class="tool-icon">ϟ</span><strong>Тест реакции</strong><p>Дождись сигнала и нажми как можно быстрее.</p><span class="tool-link">Проверить себя <b>↗</b></span></button>
@@ -68,8 +72,11 @@
         <button class="tool-card tic-card" data-open="tictactoe"><span class="tool-index">02 / STRATEGY</span><span class="tool-icon">▦</span><strong>Крестики-нолики</strong><p>Сыграй против компьютера или устрой матч на двоих.</p><span class="tool-link">Открыть игру <b>↗</b></span><span class="card-decoration tic-decoration">× ○ ×</span></button>
         <button class="tool-card snake-card" data-open="snake"><span class="tool-index">03 / ARCADE</span><span class="tool-icon">⌁</span><strong>Змейка</strong><p>Собирай энергию, увеличивай длину и побей свой рекорд.</p><span class="tool-link">Играть <b>↗</b></span><span class="card-decoration snake-decoration"></span></button>
         <button class="tool-card weather-card" data-open="weather"><span class="tool-index">04 / LIVE DATA</span><span class="tool-icon">☼</span><strong>Погода</strong><p>Выбери город или точку на карте. Погода оживит весь интерфейс.</p><span class="tool-link">Узнать погоду <b>↗</b></span><span class="card-decoration weather-decoration">☁</span></button>
+        <button class="tool-card extra-game-card" data-open="mines"><span class="tool-index">08 / LOGIC</span><span class="tool-icon">✹</span><strong>Сапёр</strong><p>Открывай клетки, отмечай мины и очищай поле без ошибок.</p><span class="tool-link">Играть <b>↗</b></span></button>
+        <button class="tool-card extra-game-card" data-open="pong"><span class="tool-index">09 / ARCADE</span><span class="tool-icon">▥</span><strong>Понг</strong><p>Сыграй против компьютерного соперника в классический теннис.</p><span class="tool-link">Играть <b>↗</b></span></button>
+        <button class="tool-card extra-game-card" data-open="shooter"><span class="tool-index">10 / ACTION</span><span class="tool-icon">✦</span><strong>Космический шутер</strong><p>Уклоняйся от астероидов, стреляй и набирай очки.</p><span class="tool-link">Играть <b>↗</b></span></button>
       </div>
-      <div class="home-bottom"><div class="mini-stat"><span class="stat-icon">✦</span><div><b>7</b><small>ИГР И ИНСТРУМЕНТОВ</small></div></div><div class="mini-stat"><span class="stat-icon">⌘</span><div><b>0</b><small>РЕГИСТРАЦИЙ</small></div></div><div class="mini-stat"><span class="stat-icon">◌</span><div><b>∞</b><small>ВОЗМОЖНОСТЕЙ</small></div></div><span class="bottom-caption">MADE TO BE PLAYED</span></div>
+      <div class="home-bottom"><div class="mini-stat"><span class="stat-icon">✦</span><div><b>10</b><small>ИГР И ИНСТРУМЕНТОВ</small></div></div><div class="mini-stat"><span class="stat-icon">⌘</span><div><b>0</b><small>РЕГИСТРАЦИЙ</small></div></div><div class="mini-stat"><span class="stat-icon">◌</span><div><b>∞</b><small>ВОЗМОЖНОСТЕЙ</small></div></div><span class="bottom-caption">MADE TO BE PLAYED</span></div>
     </section>
     <section class="page" id="page-roulette">
       <div class="page-heading"><div><div class="eyebrow">LET THE WHEEL DECIDE</div><h1>Рулетка<span class="accent">.</span></h1><p>Добавь варианты, выставь веса и доверься случайности.</p></div><span class="page-chip">01 / 04</span></div>
@@ -92,6 +99,18 @@
     <section class="page" id="page-2048"><div class="page-heading"><div><div class="eyebrow">NUMBER PUZZLE</div><h1>2048<span class="accent">.</span></h1><p>Соединяй одинаковые плитки и доберись до 2048.</p></div><span class="page-chip">05 / 08</span></div><div class="panel arcade-panel"><div class="arcade-hud"><div><small>СЧЁТ</small><b id="s2048Score">0</b></div><div><small>РЕКОРД</small><b id="s2048Best">0</b></div><button class="primary-button" id="s2048New">Новая игра ↻</button></div><div class="board-2048" id="board2048" role="grid" aria-label="Поле 2048"></div><p class="arcade-help">Управление: стрелки или свайпы. На каждом ходу появляются новые плитки.</p></div></section>
     <section class="page" id="page-memory"><div class="page-heading"><div><div class="eyebrow">MEMORY CHALLENGE</div><h1>Найди пары<span class="accent">.</span></h1><p>Тренируй память: найди все одинаковые символы.</p></div><span class="page-chip">06 / 08</span></div><div class="panel arcade-panel"><div class="arcade-hud"><div><small>ХОДЫ</small><b id="memoryMoves">0</b></div><div><small>ПАРЫ</small><b id="memoryPairs">0 / 8</b></div><button class="primary-button" id="memoryNew">Перемешать ↻</button></div><div class="memory-grid" id="memoryGrid"></div><p class="arcade-help" id="memoryStatus">Открой две карточки, чтобы найти совпадение.</p></div></section>
     <section class="page" id="page-reaction"><div class="page-heading"><div><div class="eyebrow">REFLEX LAB</div><h1>Тест реакции<span class="accent">.</span></h1><p>Проверь скорость реакции и сравни личные результаты.</p></div><span class="page-chip">07 / 08</span></div><div class="panel reaction-panel"><div class="reaction-stats"><div><small>ПОСЛЕДНИЙ РЕЗУЛЬТАТ</small><b id="reactionLast">—</b></div><div><small>ЛУЧШИЙ РЕЗУЛЬТАТ</small><b id="reactionBest">—</b></div></div><button class="reaction-zone idle" id="reactionZone"><span id="reactionIcon">ϟ</span><b id="reactionTitle">Проверь реакцию</b><small id="reactionHint">Нажми, чтобы начать. Затем жди зелёный сигнал.</small></button></div></section>
+    <section class="page" id="page-mines">
+      <div class="page-heading"><div><div class="eyebrow">LOGIC / CLASSIC</div><h1>Сапёр<span class="accent">.</span></h1><p>Открой все безопасные клетки и не попадись на мину.</p></div><span class="page-chip">08 / 10</span></div>
+      <div class="panel extra-game-panel mines-panel"><div class="arcade-hud"><div><small>МИНЫ</small><b id="minesLeft">15</b></div><div><small>ВРЕМЯ</small><b id="minesTime">0:00</b></div><div><small>ОТКРЫТО</small><b id="minesOpened">0 / 85</b></div><button class="primary-button" id="minesNew">Новая игра ↻</button></div><div class="mines-toolbar"><span id="minesStatus">Нажми на клетку, чтобы начать.</span><button class="subtle-button" id="minesFlagMode" aria-pressed="false">⚑ Режим флага: выкл.</button></div><div class="mines-grid" id="minesGrid" role="grid" aria-label="Поле сапёра 10 на 10"></div><p class="arcade-help">ПК: левая кнопка — открыть, правая — флаг. Телефон: включи режим флага.</p></div>
+    </section>
+    <section class="page" id="page-pong">
+      <div class="page-heading"><div><div class="eyebrow">ARCADE / HEAD TO HEAD</div><h1>Понг<span class="accent">.</span></h1><p>Отбивай мяч и обыграй компьютерного соперника.</p></div><span class="page-chip">09 / 10</span></div>
+      <div class="panel extra-game-panel pong-panel"><div class="arcade-hud"><div><small>ТЫ</small><b id="pongPlayerScore">0</b></div><div><small>КОМПЬЮТЕР</small><b id="pongCpuScore">0</b></div><button class="primary-button" id="pongStart">Начать матч</button></div><canvas id="pongCanvas" class="arcade-canvas" width="900" height="520" aria-label="Поле игры Понг"></canvas><div class="mines-toolbar"><span id="pongStatus">Управляй платформой мышью, пальцем или стрелками.</span><button class="subtle-button" id="pongRestart">↻ Заново</button></div><p class="arcade-help">Первый до 7 очков побеждает. На телефоне веди пальцем по полю.</p></div>
+    </section>
+    <section class="page" id="page-shooter">
+      <div class="page-heading"><div><div class="eyebrow">SPACE / SURVIVAL</div><h1>Космический шутер<span class="accent">.</span></h1><p>Уничтожай астероиды, уворачивайся и продержись как можно дольше.</p></div><span class="page-chip">10 / 10</span></div>
+      <div class="panel extra-game-panel shooter-panel"><div class="arcade-hud"><div><small>СЧЁТ</small><b id="shooterScore">0</b></div><div><small>ЖИЗНИ</small><b id="shooterLives">3</b></div><button class="primary-button" id="shooterStart">Запустить</button></div><canvas id="shooterCanvas" class="arcade-canvas shooter-canvas" width="900" height="560" aria-label="Космический шутер"></canvas><div class="shooter-touch"><button class="subtle-button" id="shooterLeft">←</button><button class="subtle-button" id="shooterFire">ОГОНЬ</button><button class="subtle-button" id="shooterRight">→</button></div><div class="mines-toolbar"><span id="shooterStatus">A / D или стрелки — движение, пробел — огонь.</span><button class="subtle-button" id="shooterRestart">↻ Перезапуск</button></div></div>
+    </section>
     <section class="page" id="page-weather">
       <div class="page-heading"><div><div class="eyebrow">WEATHER AROUND YOU</div><h1>Погода<span class="accent">.</span></h1><p>Выбери место — атмосфера на экране подстроится под него.</p></div><span class="page-chip">04 / 04</span></div>
       <div class="weather-search panel"><div class="location-input-wrap"><span>⌖</span><input id="locationInput" placeholder="Введи город или населённый пункт..." autocomplete="off"><button id="searchLocation">Найти <b>↗</b></button><div class="suggestions" id="suggestions" hidden></div></div><button class="map-toggle" id="mapToggle">⌖ Выбрать на карте</button><button class="locate-button" id="locateButton" title="Моё местоположение">◎</button></div>

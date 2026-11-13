@@ -28,8 +28,8 @@
 .reaction-zone{width:100%;min-height:330px;border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;transition:background .2s,border-color .2s,transform .2s;touch-action:manipulation}
 .reaction-zone:active{transform:scale(.995)}.reaction-zone>span{font:700 55px "Space Grotesk"}.reaction-zone>b{font:600 21px "Space Grotesk"}.reaction-zone>small{max-width:80%;color:var(--muted);font-size:11px;line-height:1.5}
 .reaction-zone.idle{background:linear-gradient(145deg,var(--panel-2),var(--panel))}.reaction-zone.waiting{background:#b77b36;color:#20180d}.reaction-zone.waiting small{color:#3d2b17}.reaction-zone.ready{background:#45b76a;border-color:#8cf2a9;color:#102718;box-shadow:0 0 55px rgba(69,183,106,.25)}.reaction-zone.ready small{color:#153d24}.reaction-zone.early{background:#a74755;color:#fff}.reaction-zone.result{background:linear-gradient(145deg,var(--panel-2),rgba(168,240,120,.12));border-color:var(--accent)}
-@media(max-width:760px){.sidebar{grid-template-columns:repeat(8,minmax(58px,1fr));overflow-x:auto;overflow-y:hidden;justify-content:start;scrollbar-width:none}.sidebar::-webkit-scrollbar{display:none}.nav-item{min-width:58px;font-size:7px}.coordinate-entry{grid-template-columns:1fr 1fr}.coordinate-entry button{grid-column:1/-1}#weatherMap{height:55vh;min-height:330px}.arcade-panel,.reaction-panel{padding:14px}.memory-grid{gap:7px}.memory-card{border-radius:10px}.reaction-zone{min-height:280px}.arcade-hud b,.reaction-stats b{font-size:17px}}
-@media(max-width:390px){.nav-item{min-width:54px}.sidebar{grid-template-columns:repeat(8,minmax(54px,1fr))}.coordinate-entry input{font-size:10px}}
+@media(max-width:760px){.sidebar{grid-template-columns:repeat(11,minmax(58px,1fr));overflow-x:auto;overflow-y:hidden;justify-content:start;scrollbar-width:none}.sidebar::-webkit-scrollbar{display:none}.nav-item{min-width:58px;font-size:7px}.coordinate-entry{grid-template-columns:1fr 1fr}.coordinate-entry button{grid-column:1/-1}#weatherMap{height:55vh;min-height:330px}.arcade-panel,.reaction-panel{padding:14px}.memory-grid{gap:7px}.memory-card{border-radius:10px}.reaction-zone{min-height:280px}.arcade-hud b,.reaction-stats b{font-size:17px}}
+@media(max-width:390px){.nav-item{min-width:54px}.sidebar{grid-template-columns:repeat(11,minmax(54px,1fr))}.coordinate-entry input{font-size:10px}}
 
 /* Refined motion system, neutral touch feedback and neural snake controls */
 :root{--accent:#a7ef83;--accent2:#70d8c7}
@@ -60,3 +60,22 @@ button:active{filter:brightness(.96)}
 @media(max-width:1100px){.snake-side-stack{grid-template-columns:1fr 1fr}.snake-info{display:block}.snake-info .panel-top,.snake-tip{grid-column:auto}}
 @media(max-width:760px){.snake-side-stack{grid-template-columns:1fr}.ai-metrics small{font-size:6px}.ai-actions{grid-template-columns:1fr 1fr}.snake-ai-panel{padding:15px}}
 @media(prefers-reduced-motion:reduce){.page{animation:none!important}*,*:before,*:after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+/* Extra arcade collection */
+.extra-game-panel{width:min(100%,850px);padding:clamp(14px,2.5vw,25px)}
+.extra-game-card{min-height:230px}
+.mines-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;color:var(--muted);font-size:11px}
+.mines-grid{width:min(100%,560px);margin:0 auto;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;touch-action:manipulation}
+.mine-cell{aspect-ratio:1;min-width:0;padding:0;border:1px solid var(--line2);border-radius:6px;background:linear-gradient(145deg,var(--panel-2),var(--panel));color:var(--accent);font:700 clamp(10px,2vw,17px) "Space Grotesk";box-shadow:inset 0 1px rgba(255,255,255,.035);transition:background .12s,border-color .12s,transform .12s}
+.mine-cell:not(:disabled):hover{border-color:var(--accent2);transform:translateY(-1px)}
+.mine-cell.revealed{background:rgba(120,216,193,.09);border-color:var(--line);box-shadow:none}
+.mine-cell.mine-hit{background:rgba(241,110,110,.25);border-color:#e87575}
+.mine-cell.flagged{color:#f1bd72}
+.mine-cell[data-number="1"]{color:#78b7f0}.mine-cell[data-number="2"]{color:#80d99c}.mine-cell[data-number="3"]{color:#f08a83}.mine-cell[data-number="4"]{color:#b69af5}.mine-cell:disabled{cursor:default}
+.arcade-canvas{display:block;width:100%;height:auto;max-height:65vh;aspect-ratio:900/520;border:1px solid var(--line);border-radius:15px;background:radial-gradient(ellipse at 50% 45%,#14283a,#08111d 80%);touch-action:none}
+.shooter-canvas{aspect-ratio:900/560}
+.pong-panel,.shooter-panel{overflow:hidden}
+.shooter-touch{display:flex;justify-content:center;gap:12px;margin-top:12px}
+.shooter-touch button{min-width:72px;min-height:42px}
+@media(max-width:760px){.mines-grid{gap:3px}.mine-cell{border-radius:4px}.mines-toolbar{align-items:flex-start;flex-direction:column}.mines-toolbar button{width:100%}.arcade-canvas{max-height:none}.extra-game-panel{padding:12px}.shooter-touch button{flex:1}}
+@media(prefers-reduced-motion:reduce){.mine-cell{transition:none}}
