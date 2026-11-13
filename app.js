@@ -2,7 +2,7 @@
 "use strict";
 const API_URL="https://commons.wikimedia.org/w/api.php";
 const STORAGE_KEY="wallora-favorites-v1";
-const CATEGORY_QUERIES={all:"landscape wallpaper nature",nature:"nature landscape mountain forest wallpaper",space:"outer space nebula galaxy stars",architecture:"architecture city building photography",cars:"sports car automobile photography",ocean:"ocean sea underwater waves",minimal:"minimalist abstract background photography",animals:"wildlife animal nature photography"};
+const CATEGORY_QUERIES={all:"landscape",nature:"nature",space:"galaxy",architecture:"architecture",cars:"sports car",ocean:"ocean",minimal:"abstract",animals:"wildlife"};
 const $=s=>document.querySelector(s);
 const el={grid:$("#wallpaperGrid"),searchForm:$("#searchForm"),searchInput:$("#searchInput"),categoryRow:$("#categoryRow"),orientation:$("#orientationFilter"),sort:$("#sortSelect"),status:$("#resultStatus"),visibleCount:$("#visibleCount"),title:$("#sectionTitle"),subtitle:$("#sectionSubtitle"),loadMoreWrap:$("#loadMoreWrap"),loadMore:$("#loadMoreButton"),empty:$("#emptyState"),emptyTitle:$("#emptyTitle"),emptyDescription:$("#emptyDescription"),reset:$("#resetButton"),homeNav:$("#homeNav"),favoritesNav:$("#favoritesNav"),favoriteCount:$("#favoriteCount"),modal:$("#imageModal"),modalClose:$("#modalClose"),modalImage:$("#modalImage"),modalTitle:$("#modalTitle"),modalFacts:$("#modalFacts"),modalCredit:$("#modalCredit"),modalFavorite:$("#modalFavorite"),download:$("#downloadLink"),source:$("#sourceLink"),license:$("#licenseNote"),toast:$("#toast")};
 const state={items:[],continuation:null,loading:false,query:CATEGORY_QUERIES.all,category:"all",view:"all",orientation:"all",sort:"relevance",activeItem:null,requestId:0,toastTimer:null};
