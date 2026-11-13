@@ -79,3 +79,10 @@ button:active{filter:brightness(.96)}
 .shooter-touch button{min-width:72px;min-height:42px}
 @media(max-width:760px){.mines-grid{gap:3px}.mine-cell{border-radius:4px}.mines-toolbar{align-items:flex-start;flex-direction:column}.mines-toolbar button{width:100%}.arcade-canvas{max-height:none}.extra-game-panel{padding:12px}.shooter-touch button{flex:1}}
 @media(prefers-reduced-motion:reduce){.mine-cell{transition:none}}
+
+/* Universal AI autoplay controls */
+.autoplay-panel{margin:0 0 15px;padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 20px;align-items:center;border-color:color-mix(in srgb,var(--accent2) 35%,var(--line));background:radial-gradient(ellipse at 100% 0,rgba(112,216,199,.10),transparent 55%),var(--panel)}
+.autoplay-copy b,.autoplay-copy small{display:block}.autoplay-kicker{color:var(--accent2);font:700 8px "Space Grotesk";letter-spacing:.14em}.autoplay-copy b{margin-top:5px;font:600 15px "Space Grotesk"}.autoplay-copy small{margin-top:5px;color:var(--muted);font-size:10px;line-height:1.5}
+.autoplay-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.autoplay-controls label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:9px}.autoplay-controls select{height:36px;padding:0 9px;border:1px solid var(--line2);border-radius:8px;background:var(--panel-2);color:var(--text);font-size:10px}.autoplay-controls button{min-height:36px;padding:0 12px;font-size:10px}.autoplay-status{grid-column:1/-1;padding-top:9px;border-top:1px solid var(--line);color:var(--muted2);font-size:9px}
+.autoplay-controls button:disabled,.autoplay-controls select:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:760px){.autoplay-panel{grid-template-columns:1fr;padding:14px}.autoplay-controls{display:grid;grid-template-columns:1fr 1fr}.autoplay-controls label{grid-column:1/-1;justify-content:space-between}.autoplay-controls select{flex:1}.autoplay-controls button{width:100%}.autoplay-copy b{font-size:13px}}
