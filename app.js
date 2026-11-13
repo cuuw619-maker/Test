@@ -6,25 +6,32 @@ const FAVORITES_KEY="wallora-favorites-v2";
 const SETTINGS_KEY="wallora-settings-v1";
 const CATEGORIES={
  wallpapers:[
-  ["all","Для тебя","wallpaper aesthetic"],
+  ["all","Для тебя","wallpaper"],
   ["anime","Аниме","anime"],
+  ["manga","Манга","manga illustration"],
   ["minimal","Минимализм","minimalism"],
   ["gaming","Игры","video games"],
+  ["pixel","Пиксель-арт","pixel art"],
   ["cyberpunk","Киберпанк","cyberpunk"],
+  ["lofi","Lo-fi","lofi aesthetic"],
+  ["synthwave","Synthwave","synthwave"],
   ["dark","Тёмные","dark art"],
   ["cars","Авто","sports car photography"],
   ["space","Космос","galaxy nebula space"],
   ["nature","Природа","mountain landscape"],
-  ["abstract","Абстракция","abstract art"]
+  ["abstract","Абстракция","abstract art"],
+  ["horror","Мрачные","dark fantasy"]
  ],
  avatars:[
   ["all","Для тебя","avatar illustration"],
-  ["anime","Аниме","anime character portrait"],
-  ["pixel","Пиксель-арт","pixel art character"],
-  ["minimal","Минимализм","minimalist portrait illustration"],
-  ["fantasy","Фэнтези","fantasy character portrait"],
-  ["animals","Животные","animal portrait illustration"],
-  ["abstract","Абстракция","abstract avatar art"]
+  ["anime","Аниме","anime portrait"],
+  ["pixel","Пиксель-арт","pixel art avatar"],
+  ["minimal","Минимализм","minimalist portrait"],
+  ["fantasy","Фэнтези","fantasy portrait"],
+  ["animals","Животные","animal portrait"],
+  ["gaming","Игры","video game character portrait"],
+  ["dark","Тёмные","dark character portrait"],
+  ["abstract","Абстракция","abstract avatar"]
  ]
 };
 const $=s=>document.querySelector(s);
@@ -282,7 +289,7 @@ function switchMode(mode){
  el.homeModes.forEach(button=>button.classList.toggle("is-active",button.dataset.mode===mode));
  const facts=mode==="facts";el.searchForm.hidden=facts;el.heroVisual.hidden=facts;el.heroMeta.hidden=facts;el.categoryArea.hidden=facts;el.collection.hidden=facts;el.factsSection.hidden=!facts;el.sourceNote.hidden=false;
  if(mode==="wallpapers"){el.heroEyebrow.textContent="YOUR SCREEN. YOUR VIBE.";el.heroTitle.innerHTML='Твой экран.<br><em>Твои правила.</em>';el.heroDescription.textContent="Обои для телефона и компьютера: аниме, игры, минимализм, киберпанк и другие стили.";el.heroMeta.innerHTML="<span><i>✳</i> Обои для любых экранов</span><span><i>↗</i> Открытые источники</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR WALLPAPER";el.title.textContent="Подбери настроение.";state.query="nature landscape"}
- if(mode==="avatars"){el.heroEyebrow.textContent="YOUR PROFILE. YOUR STYLE.";el.heroTitle.innerHTML='Твой профиль.<br><em>Твой персонаж.</em>';el.heroDescription.textContent="Аватарки, персонажи, пиксель-арт и иллюстрации — выбери изображение для своего профиля.";el.heroMeta.innerHTML="<span><i>◉</i> Квадратные и портретные</span><span><i>✳</i> Разные стили</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR AVATAR";state.query="anime character portrait"}
+ if(mode==="avatars"){el.heroEyebrow.textContent="YOUR PROFILE. YOUR STYLE.";el.heroTitle.innerHTML='Твой профиль.<br><em>Твой персонаж.</em>';el.heroDescription.textContent="Аватарки, персонажи, пиксель-арт и иллюстрации — выбери изображение для своего профиля.";el.heroMeta.innerHTML="<span><i>◉</i> Квадратные и портретные</span><span><i>✳</i> Разные стили</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR AVATAR";state.query="avatar illustration"}
  if(mode==="facts"){el.heroEyebrow.textContent="RANDOM KNOWLEDGE";el.heroTitle.innerHTML='Случайное.<br><em>Но интересное.</em>';el.heroDescription.textContent="Каждое нажатие открывает новую статью из русской Википедии. Узнавай то, о чём даже не собирался искать.";el.sectionEyebrow.textContent="WIKIPEDIA DISCOVERY";fetchRandomFact()}
  setCategoryButtons();el.homeModes.forEach(b=>b.classList.toggle("is-active",b.dataset.mode===mode));
  if(!facts){el.status.textContent="Открытая медиатека";loadWallpapers(false)}
@@ -290,7 +297,7 @@ function switchMode(mode){
 function chooseCategory(category){
  state.category=category;state.view="all";const categoryList=CATEGORIES[state.mode==="avatars"?"avatars":"wallpapers"];const entry=categoryList.find(x=>x[0]===category)||categoryList[0];state.query=entry[2];
  state.continuation=null;el.homeModes.forEach(b=>b.classList.toggle("is-active",b.dataset.mode===state.mode));el.categoryRow.querySelectorAll(".category-chip").forEach(b=>b.classList.toggle("is-active",b.dataset.category===category));
- if(category==="all")state.query=state.mode==="avatars"?"anime portrait illustration":"nature landscape";
+ if(category==="all")state.query=state.mode==="avatars"?"avatar illustration":"wallpaper";
  el.favoritesNav.classList.remove("is-active");loadWallpapers(false);
 }
 async function fetchRandomFact(){
