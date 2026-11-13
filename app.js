@@ -1,34 +1,37 @@
 (() => {
 "use strict";
 const COMMONS_API="https://commons.wikimedia.org/w/api.php";
+const WALLHAVEN_API="https://wallhaven.cc/api/v1/search";
 const WIKI_API="https://ru.wikipedia.org/w/api.php";
 const FAVORITES_KEY="wallora-favorites-v2";
 const SETTINGS_KEY="wallora-settings-v1";
 const CATEGORIES={
  wallpapers:[
   ["all","Для тебя","wallpaper"],
-  ["anime","Аниме","anime"],
+  ["anime","Аниме","anime wallpaper"],
   ["manga","Манга","manga illustration"],
-  ["minimal","Минимализм","minimalism"],
-  ["gaming","Игры","video games"],
+  ["illustration","Иллюстрации","digital illustration"],
+  ["minimal","Минимализм","minimalist wallpaper"],
+  ["gaming","Игры","video game artwork"],
   ["pixel","Пиксель-арт","pixel art"],
-  ["cyberpunk","Киберпанк","cyberpunk"],
-  ["lofi","Lo-fi","lofi aesthetic"],
-  ["synthwave","Synthwave","synthwave"],
-  ["dark","Тёмные","dark art"],
-  ["cars","Авто","sports car photography"],
-  ["space","Космос","galaxy nebula space"],
-  ["nature","Природа","mountain landscape"],
-  ["abstract","Абстракция","abstract art"],
-  ["horror","Мрачные","dark fantasy"]
+  ["cyberpunk","Киберпанк","cyberpunk wallpaper"],
+  ["lofi","Lo-fi","lofi anime"],
+  ["synthwave","Synthwave","synthwave art"],
+  ["dark","Тёмные","dark fantasy"],
+  ["retro","Ретро","retro anime"],
+  ["cars","Авто","car wallpaper"],
+  ["space","Космос","space art"],
+  ["nature","Природа","fantasy landscape"],
+  ["abstract","Абстракция","abstract wallpaper"],
+  ["horror","Мрачные","dark horror illustration"]
  ],
  avatars:[
-  ["all","Для тебя","avatar illustration"],
+  ["all","Для тебя","avatar portrait"],
   ["anime","Аниме","anime portrait"],
   ["pixel","Пиксель-арт","pixel art avatar"],
-  ["minimal","Минимализм","minimalist portrait"],
-  ["fantasy","Фэнтези","fantasy portrait"],
-  ["animals","Животные","animal portrait"],
+  ["minimal","Минимализм","minimalist avatar"],
+  ["fantasy","Фэнтези","fantasy character portrait"],
+  ["animals","Животные","illustrated animal portrait"],
   ["gaming","Игры","video game character portrait"],
   ["dark","Тёмные","dark character portrait"],
   ["abstract","Абстракция","abstract avatar"]
@@ -52,7 +55,7 @@ const el={
  factExtract:$("#factExtract"),factImageWrap:$("#factImageWrap"),factImage:$("#factImage"),factSource:$("#factSource"),
  factCategory:$("#factCategory"),randomFact:$("#randomFactButton"),heroVisual:$("#heroVisual")
 };
-const state={items:[],continuation:null,loading:false,query:"nature landscape",category:"all",mode:"wallpapers",view:"all",orientation:"all",sort:"relevance",activeItem:null,requestId:0,factLoading:false,factRequestId:0,toastTimer:null};
+const state={items:[],continuation:null,loading:false,query:"wallpaper",category:"all",mode:"wallpapers",view:"all",orientation:"all",sort:"relevance",activeItem:null,requestId:0,factLoading:false,factRequestId:0,toastTimer:null};
 const defaults={theme:"dark",particles:true,motion:true,tilt:true};
 let settings=readSettings();
 let favorites=readFavorites();
@@ -67,7 +70,7 @@ function readSettings(){try{return{...defaults,...JSON.parse(localStorage.getIte
 function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}catch(error){console.warn("Настройки не сохранены",error)}}
 function readFavorites(){try{const value=JSON.parse(localStorage.getItem(FAVORITES_KEY)||"[]");return Array.isArray(value)?value.filter(x=>x&&x.id&&x.thumb&&x.original):[]}catch{return[]}}
 function saveFavorites(){try{localStorage.setItem(FAVORITES_KEY,JSON.stringify(favorites));updateFavoriteCount()}catch{showToast("Не удалось сохранить: память браузера заполнена")}}
-function updateFavoriteCount(){el.favoriteCount.querySelector("b").textContent=String(favorites.length)}
+function updateFavoriteCount(){el.favoriteCount.textContent=String(favorites.length)}
 function applyTheme(){
  const theme=settings.theme==="system"?(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):settings.theme;
  document.body.dataset.theme=theme;
@@ -92,6 +95,70 @@ function commonsApiUrl(continuation){
  const params=new URLSearchParams({action:"query",format:"json",origin:"*",generator:"search",gsrnamespace:"6",gsrsearch:state.query,gsrlimit:"30",prop:"imageinfo",iiprop:"url|size|mime|extmetadata",iiurlwidth:"1100",iiextmetadatalanguage:"en"});
  if(continuation)Object.entries(continuation).forEach(([key,value])=>params.set(key,String(value)));
  return COMMONS_API+"?"+params.toString();
+}
+function wallhavenSearchQuery(){
+ const query=state.query.trim();
+ if(state.mode==="wallpapers"&&state.category==="all")return "";
+ return query.replace(/\bwallpaper\b/gi,"").replace(/\s+/g," ").trim();
+}
+function normalizeWallhaven(image){
+ if(!image||!image.path)return null;
+ const width=Number(image.dimension_x)||0,height=Number(image.dimension_y)||0;
+ const tags=(Array.isArray(image.tags)?image.tags:[]).map(tag=>cleanText(tag&&tag.name)).filter(Boolean).slice(0,3);
+ const uploader=image.uploader&&image.uploader.username;
+ return{
+  id:"wallhaven:"+String(image.id),
+  title:tags.join(" · ")||("Wallpaper "+String(image.id)),
+  thumb:image.thumbs&&(image.thumbs.large||image.thumbs.original)||image.path,
+  original:image.path,
+  pageUrl:image.url||image.short_url||("https://wallhaven.cc/w/"+image.id),
+  width,height,mime:cleanText(image.file_type||""),
+  artist:cleanText(uploader||"Автор не указан"),
+  license:"Права зависят от автора. SFW-фильтр не означает свободную лицензию.",
+  source:"Wallhaven"
+ };
+}
+async function fetchWallhavenPage(page){
+ const params=new URLSearchParams({purity:"100",categories:state.category==="anime"||state.category==="manga"||state.category==="lofi"?"010":"111",sorting:wallhavenSearchQuery()?"relevance":"date_added",order:"desc",page:String(page)});
+ const query=wallhavenSearchQuery();
+ if(query)params.set("q",query);
+ if(state.orientation==="landscape")params.set("ratios","16x9,16x10,21x9");
+ else if(state.orientation==="portrait")params.set("ratios","9x16,10x16,9x21");
+ else if(state.orientation==="square")params.set("ratios","1x1");
+ else if(state.mode==="avatars")params.set("ratios","1x1,3x4,4x5");
+ const response=await fetch(WALLHAVEN_API+"?"+params.toString(),{headers:{Accept:"application/json"}});
+ if(!response.ok)throw new Error("Wallhaven "+response.status);
+ const data=await response.json(),meta=data.meta||{};
+ const next=Number(meta.current_page||page)<Number(meta.last_page||page)?Number(meta.current_page||page)+1:null;
+ return{provider:"Wallhaven",items:(data.data||[]).map(normalizeWallhaven).filter(Boolean),next};
+}
+function shouldLoadWaifu(){
+ return state.mode==="avatars"||["anime","manga","lofi"].includes(state.category)||/\b(anime|manga|waifu)\b/i.test(state.query);
+}
+function normalizeWaifu(image){
+ if(!image||!image.url||image.is_nsfw===true)return null;
+ const width=Number(image.width)||0,height=Number(image.height)||0;
+ const tags=(Array.isArray(image.tags)?image.tags:[]).map(tag=>cleanText(tag&&tag.name||tag)).filter(Boolean).slice(0,3);
+ const artist=image.artist&&(image.artist.name||image.artist);
+ const pageUrl=typeof image.source==="string"&&/^https?:\/\//i.test(image.source)?image.source:"https://www.waifu.im/";
+ return{
+  id:"waifuim:"+String(image.id||image.signature||image.url),
+  title:tags.join(" · ")||"Anime illustration",
+  thumb:image.preview_url||image.url,original:image.url,pageUrl,width,height,
+  mime:image.extension?"image/"+String(image.extension).replace(/^\./,""):"image",
+  artist:cleanText(artist||"Автор не указан"),
+  license:"Права принадлежат автору; условия использования смотри в исходной публикации.",
+  source:"Waifu.im"
+ };
+}
+async function fetchWaifuPage(){
+ const params=new URLSearchParams({is_nsfw:"false",many:"true",included_tags:"waifu"});
+ if(state.orientation==="landscape")params.set("orientation","LANDSCAPE");
+ else if(state.orientation==="portrait")params.set("orientation","PORTRAIT");
+ const response=await fetch("https://api.waifu.im/search/?"+params.toString(),{headers:{Accept:"application/json"}});
+ if(!response.ok)throw new Error("Waifu.im "+response.status);
+ const data=await response.json();
+ return{provider:"Waifu.im",items:(data.images||[]).map(normalizeWaifu).filter(Boolean),next:null};
 }
 function openverseQuery(){
  const query=state.query.trim();
@@ -194,18 +261,25 @@ async function fetchNasaPage(page){
 }
 async function loadWallpapers(append=false){
  if(append&&state.loading)return;
- const currentCursor=append?(state.continuation||{}):{commons:null,openverse:null,artic:1,nasa:1,met:0};
- if(append&&!currentCursor.commons&&!currentCursor.openverse&&!currentCursor.artic&&!currentCursor.nasa&&(currentCursor.met===null||currentCursor.met===undefined))return;
- const requestId=++state.requestId;state.loading=true;el.loadMore.disabled=true;el.loadMore.textContent="Собираем...";
- if(!append){state.items=[];el.grid.innerHTML='<div class="loading-state"><span class="loader"></span><p>Ищем изображения в нескольких библиотеках...</p></div>';el.empty.hidden=true;el.loadMoreWrap.hidden=true}
+ const currentCursor=append?(state.continuation||{}):{wallhaven:1,commons:null,openverse:null};
+ if(append&&!currentCursor.wallhaven&&!currentCursor.commons&&!currentCursor.openverse)return;
+ const requestId=++state.requestId;state.loading=true;el.loadMore.disabled=true;el.loadMore.textContent="Ищем...";
+ if(!append){state.items=[];el.grid.innerHTML='<div class="loading-state"><span class="loader"></span><p>Ищем обои в специализированных каталогах...</p></div>';el.empty.hidden=true;el.loadMoreWrap.hidden=true}
  const tasks=[];
- if(!append||currentCursor.commons)tasks.push(fetchCommonsPage(currentCursor.commons));
- if(!append||currentCursor.openverse)tasks.push(fetchOpenversePage(currentCursor.openverse));
- if(!append||currentCursor.artic)tasks.push(fetchArticPage(currentCursor.artic||1));
- if(shouldLoadNasa()&&(!append||currentCursor.nasa))tasks.push(fetchNasaPage(currentCursor.nasa||1));
- if(!append||(currentCursor.met!==null&&currentCursor.met!==undefined))tasks.push(fetchMetPage(currentCursor.met||0));
- const results=await Promise.all(tasks.map(async task=>{try{return await task}catch(error){return{provider:"Неизвестный источник",items:[],next:null,error}}}));
+ if(!append||currentCursor.wallhaven)tasks.push(fetchWallhavenPage(currentCursor.wallhaven||1));
+ if(!append&&shouldLoadWaifu())tasks.push(fetchWaifuPage());
+ if(append&&currentCursor.commons)tasks.push(fetchCommonsPage(currentCursor.commons));
+ if(append&&currentCursor.openverse)tasks.push(fetchOpenversePage(currentCursor.openverse));
+ const runTasks=async list=>Promise.all(list.map(async task=>{try{return await task}catch(error){return{provider:"Источник недоступен",items:[],next:null,error}}}));
+ let results=await runTasks(tasks);
  if(requestId!==state.requestId)return;
+ const wallhavenResult=results.find(result=>result.provider==="Wallhaven");
+ const hasWallpaperResults=Boolean(wallhavenResult&&!wallhavenResult.error&&wallhavenResult.items.length);
+ if(!append&&!hasWallpaperResults){
+  const fallback=await runTasks([fetchCommonsPage(null),fetchOpenversePage(null)]);
+  if(requestId!==state.requestId)return;
+  results=results.concat(fallback);
+ }
  const failed=results.filter(result=>result.error);
  const successful=results.filter(result=>!result.error);
  const seenIds=new Set(state.items.map(item=>item.id));
@@ -216,23 +290,21 @@ async function loadWallpapers(append=false){
   }
  }));
  state.continuation={
-  commons:successful.find(x=>x.provider==="Wikimedia Commons")?.next||null,
-  openverse:successful.find(x=>x.provider==="Openverse")?.next||null,
-  artic:successful.find(x=>x.provider==="Art Institute of Chicago")?.next||null,
-  nasa:successful.find(x=>x.provider==="NASA Image and Video Library")?.next||null,
-  met:successful.find(x=>x.provider==="The Metropolitan Museum of Art")?.next??null
+  wallhaven:successful.find(result=>result.provider==="Wallhaven")?.next||null,
+  commons:successful.find(result=>result.provider==="Wikimedia Commons")?.next||null,
+  openverse:successful.find(result=>result.provider==="Openverse")?.next||null
  };
  const hasMore=Object.values(state.continuation).some(Boolean);
  state.loading=false;renderGrid();
- const providerNames=successful.filter(x=>x.items.length).map(x=>x.provider);
- el.status.textContent=providerNames.length?providerNames.length+" источника изображений":"Источники временно недоступны";
+ const providerNames=successful.filter(result=>result.items.length).map(result=>result.provider);
+ el.status.textContent=providerNames.length?providerNames.join(" · "):"Каталоги временно недоступны";
  el.loadMoreWrap.hidden=!hasMore||state.view==="favorites";el.loadMore.disabled=false;el.loadMore.innerHTML='Показать ещё <span>↓</span>';
  if(!state.items.length){
-  el.empty.hidden=false;el.emptyTitle.textContent=failed.length===tasks.length?"Не удалось подключиться к библиотекам":"Пока нет подходящих изображений";
-  el.emptyDescription.textContent="Попробуй другой запрос или повтори загрузку. Некоторые источники могут временно ограничивать запросы.";
+  el.empty.hidden=false;el.emptyTitle.textContent=failed.length===results.length?"Не удалось подключиться к каталогам":"Под эту тему пока нет изображений";
+  el.emptyDescription.textContent="Попробуй другое название или повтори загрузку. Основной поиск рассчитан на готовые обои, а открытые медиатеки используются как резерв.";
   el.loadMoreWrap.hidden=false;
- }else if(failed.length===tasks.length){
-  showToast("Источники изображений временно не отвечают");
+ }else if(failed.length===results.length){
+  showToast("Каталоги изображений временно не отвечают");
  }
 }
 function visibleItems(){
@@ -248,7 +320,7 @@ function isFavorite(id){return favorites.some(item=>item.id===id)}
 function makeCard(item,index){
  const card=document.createElement("article");card.className="wallpaper-card";card.style.animationDelay=Math.min(index*35,350)+"ms";
  const wrap=document.createElement("div");wrap.className="card-image-wrap";wrap.tabIndex=0;wrap.setAttribute("role","button");wrap.setAttribute("aria-label","Открыть "+item.title);
- const img=document.createElement("img");img.className="card-image";img.src=item.thumb;img.alt=item.title;img.loading="lazy";img.decoding="async";img.addEventListener("error",()=>card.remove(),{once:true});
+ const img=document.createElement("img");img.className="card-image";img.alt=item.title;img.loading="lazy";img.decoding="async";img.addEventListener("load",()=>img.classList.add("is-loaded"),{once:true});img.addEventListener("error",()=>card.remove(),{once:true});img.src=item.thumb;if(img.complete&&img.naturalWidth)img.classList.add("is-loaded");
  const overlay=document.createElement("div");overlay.className="card-overlay";
  const fav=document.createElement("button");fav.className="favorite-button"+(isFavorite(item.id)?" is-favorite":"");fav.type="button";fav.textContent=isFavorite(item.id)?"♥":"♡";fav.setAttribute("aria-label",isFavorite(item.id)?"Убрать из избранного":"Добавить в избранное");
  fav.addEventListener("click",event=>{event.stopPropagation();toggleFavorite(item);const saved=isFavorite(item.id);fav.classList.toggle("is-favorite",saved);fav.textContent=saved?"♥":"♡";fav.setAttribute("aria-label",saved?"Убрать из избранного":"Добавить в избранное")});
@@ -288,8 +360,8 @@ function switchMode(mode){
  state.mode=mode;state.view="all";state.category="all";state.continuation=null;state.orientation="all";state.sort="relevance";el.orientation.value="all";el.sort.value="relevance";el.searchInput.value="";
  el.homeModes.forEach(button=>button.classList.toggle("is-active",button.dataset.mode===mode));
  const facts=mode==="facts";el.searchForm.hidden=facts;el.heroVisual.hidden=facts;el.heroMeta.hidden=facts;el.categoryArea.hidden=facts;el.collection.hidden=facts;el.factsSection.hidden=!facts;el.sourceNote.hidden=false;
- if(mode==="wallpapers"){el.heroEyebrow.textContent="YOUR SCREEN. YOUR VIBE.";el.heroTitle.innerHTML='Твой экран.<br><em>Твои правила.</em>';el.heroDescription.textContent="Обои для телефона и компьютера: аниме, игры, минимализм, киберпанк и другие стили.";el.heroMeta.innerHTML="<span><i>✳</i> Обои для любых экранов</span><span><i>↗</i> Открытые источники</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR WALLPAPER";el.title.textContent="Подбери настроение.";state.query="nature landscape"}
- if(mode==="avatars"){el.heroEyebrow.textContent="YOUR PROFILE. YOUR STYLE.";el.heroTitle.innerHTML='Твой профиль.<br><em>Твой персонаж.</em>';el.heroDescription.textContent="Аватарки, персонажи, пиксель-арт и иллюстрации — выбери изображение для своего профиля.";el.heroMeta.innerHTML="<span><i>◉</i> Квадратные и портретные</span><span><i>✳</i> Разные стили</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR AVATAR";state.query="avatar illustration"}
+ if(mode==="wallpapers"){el.heroEyebrow.textContent="YOUR SCREEN. YOUR VIBE.";el.heroTitle.innerHTML='Твой экран.<br><em>Твои правила.</em>';el.heroDescription.textContent="Обои для телефона и компьютера: аниме, игры, минимализм, киберпанк и другие стили.";el.heroMeta.innerHTML="<span><i>✳</i> Обои для любых экранов</span><span><i>↗</i> Открытые источники</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR WALLPAPER";el.title.textContent="Подбери настроение.";state.query="wallpaper"}
+ if(mode==="avatars"){el.heroEyebrow.textContent="YOUR PROFILE. YOUR STYLE.";el.heroTitle.innerHTML='Твой профиль.<br><em>Твой персонаж.</em>';el.heroDescription.textContent="Аватарки, персонажи, пиксель-арт и иллюстрации — выбери изображение для своего профиля.";el.heroMeta.innerHTML="<span><i>◉</i> Квадратные и портретные</span><span><i>✳</i> Разные стили</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR AVATAR";state.query="avatar portrait illustration"}
  if(mode==="facts"){el.heroEyebrow.textContent="RANDOM KNOWLEDGE";el.heroTitle.innerHTML='Случайное.<br><em>Но интересное.</em>';el.heroDescription.textContent="Каждое нажатие открывает новую статью из русской Википедии. Узнавай то, о чём даже не собирался искать.";el.sectionEyebrow.textContent="WIKIPEDIA DISCOVERY";fetchRandomFact()}
  setCategoryButtons();el.homeModes.forEach(b=>b.classList.toggle("is-active",b.dataset.mode===mode));
  if(!facts){el.status.textContent="Открытая медиатека";loadWallpapers(false)}
