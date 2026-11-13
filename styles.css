@@ -66,7 +66,7 @@ button:active{filter:brightness(.96)}
 .extra-game-card{min-height:230px}
 .mines-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;color:var(--muted);font-size:11px}
 .mines-grid{width:min(100%,560px);margin:0 auto;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;touch-action:manipulation}
-.mine-cell{aspect-ratio:1;min-width:0;padding:0;border:1px solid var(--line2);border-radius:6px;background:linear-gradient(145deg,var(--panel-2),var(--panel));color:var(--accent);font:700 clamp(10px,2vw,17px) "Space Grotesk";box-shadow:inset 0 1px rgba(255,255,255,.035);transition:background .12s,border-color .12s,transform .12s}
+.mine-cell{position:relative;aspect-ratio:1;min-width:0;padding:0;border:1px solid var(--line2);border-radius:6px;background:linear-gradient(145deg,var(--panel-2),var(--panel));color:var(--accent);font:700 clamp(10px,2vw,17px) "Space Grotesk";box-shadow:inset 0 1px rgba(255,255,255,.035);transition:background .12s,border-color .12s,transform .12s}
 .mine-cell:not(:disabled):hover{border-color:var(--accent2);transform:translateY(-1px)}
 .mine-cell.revealed{background:rgba(120,216,193,.09);border-color:var(--line);box-shadow:none}
 .mine-cell.mine-hit{background:rgba(241,110,110,.25);border-color:#e87575}
@@ -132,4 +132,4 @@ button:disabled{cursor:not-allowed;filter:saturate(.45);opacity:.58}
 #board2048.ai-direction-left{box-shadow:inset 5px 0 #a8f07866}#board2048.ai-direction-right{box-shadow:inset -5px 0 #a8f07866}#board2048.ai-direction-up{box-shadow:inset 0 5px #a8f07866}#board2048.ai-direction-down{box-shadow:inset 0 -5px #a8f07866}
 @media(prefers-reduced-motion:reduce){.ai-esp-target,.ai-canvas-cursor{animation:none!important}}
 
-.ai-esp-safe{outline:1px dashed #a8f078!important;outline-offset:-3px;box-shadow:inset 0 0 0 2px #a8f07835!important}.ai-esp-risk{outline:1px dashed #ff6878!important;outline-offset:-3px;box-shadow:inset 0 0 0 2px #ff687825!important}.ai-esp-safe:before,.ai-esp-risk:before{position:absolute;z-index:4;top:2px;right:3px;font:800 8px "DM Sans",sans-serif;pointer-events:none}.ai-esp-safe:before{content:"SAFE";color:#a8f078}.ai-esp-risk:before{content:"RISK";color:#ff6878}
+.ai-esp-safe{outline:1px dashed #a8f078!important;outline-offset:-3px;box-shadow:inset 0 0 0 2px #a8f07835!important}.ai-esp-risk{outline:1px dashed #ff6878!important;outline-offset:-3px;box-shadow:inset 0 0 0 2px #ff687825!important}.ai-esp-safe:before,.ai-esp-risk:before{position:absolute;z-index:4;top:2px;right:3px;font:800 8px "DM Sans",sans-serif;pointer-events:none}.ai-esp-safe:before{content:"LOW";color:#a8f078}.ai-esp-risk:before{content:"RISK";color:#ff6878}
