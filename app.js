@@ -133,7 +133,7 @@ async function fetchWallhavenPage(page){
  return{provider:"Wallhaven",items:(data.data||[]).map(normalizeWallhaven).filter(Boolean),next};
 }
 function shouldLoadWaifu(){
- return state.mode==="avatars"||["anime","manga","lofi"].includes(state.category)||/\b(anime|manga|waifu)\b/i.test(state.query);
+ return (state.mode==="avatars"&&["all","anime"].includes(state.category))||["anime","manga","lofi"].includes(state.category)||/\b(anime|manga|waifu)\b/i.test(state.query);
 }
 function normalizeWaifu(image){
  if(!image||!image.url||image.is_nsfw===true)return null;
