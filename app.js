@@ -7,15 +7,15 @@ const SETTINGS_KEY="wallora-settings-v1";
 const CATEGORIES={
  wallpapers:[
   ["all","Для тебя","wallpaper aesthetic"],
-  ["anime","Аниме","anime wallpaper"],
-  ["minimal","Минимализм","minimalist aesthetic background"],
-  ["gaming","Игры","video game wallpaper"],
-  ["cyberpunk","Киберпанк","cyberpunk wallpaper"],
-  ["dark","Тёмные","dark aesthetic"],
+  ["anime","Аниме","anime"],
+  ["minimal","Минимализм","minimalism"],
+  ["gaming","Игры","video games"],
+  ["cyberpunk","Киберпанк","cyberpunk"],
+  ["dark","Тёмные","dark art"],
   ["cars","Авто","sports car photography"],
   ["space","Космос","galaxy nebula space"],
   ["nature","Природа","mountain landscape"],
-  ["abstract","Абстракция","abstract wallpaper"]
+  ["abstract","Абстракция","abstract art"]
  ],
  avatars:[
   ["all","Для тебя","avatar illustration"],
@@ -88,8 +88,8 @@ function commonsApiUrl(continuation){
 }
 function openverseQuery(){
  const query=state.query.trim();
- if(state.mode==="avatars")return query+" profile icon portrait";
- return query+" wallpaper";
+ if(state.mode==="avatars")return query;
+ return query;
 }
 function articQuery(){
  const q=(state.query+" "+state.category).toLowerCase();
