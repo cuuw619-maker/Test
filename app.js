@@ -1,439 +1,90 @@
-(() => {
-"use strict";
-const COMMONS_API="https://commons.wikimedia.org/w/api.php";
-const WALLHAVEN_API="https://wallhaven.cc/api/v1/search";
-const WIKI_API="https://ru.wikipedia.org/w/api.php";
-const FAVORITES_KEY="wallora-favorites-v2";
-const SETTINGS_KEY="wallora-settings-v1";
-const CATEGORIES={
- wallpapers:[
-  ["all","Для тебя","wallpaper"],
-  ["anime","Аниме","anime wallpaper"],
-  ["manga","Манга","manga illustration"],
-  ["illustration","Иллюстрации","digital illustration"],
-  ["minimal","Минимализм","minimalist wallpaper"],
-  ["gaming","Игры","video game artwork"],
-  ["pixel","Пиксель-арт","pixel art"],
-  ["cyberpunk","Киберпанк","cyberpunk wallpaper"],
-  ["lofi","Lo-fi","lofi anime"],
-  ["synthwave","Synthwave","synthwave art"],
-  ["dark","Тёмные","dark fantasy"],
-  ["retro","Ретро","retro anime"],
-  ["cars","Авто","car wallpaper"],
-  ["space","Космос","space art"],
-  ["nature","Природа","fantasy landscape"],
-  ["abstract","Абстракция","abstract wallpaper"],
-  ["horror","Мрачные","dark horror illustration"]
- ],
- avatars:[
-  ["all","Для тебя","avatar portrait"],
-  ["anime","Аниме","anime portrait"],
-  ["pixel","Пиксель-арт","pixel art avatar"],
-  ["minimal","Минимализм","minimalist avatar"],
-  ["fantasy","Фэнтези","fantasy character portrait"],
-  ["animals","Животные","illustrated animal portrait"],
-  ["gaming","Игры","video game character portrait"],
-  ["dark","Тёмные","dark character portrait"],
-  ["abstract","Абстракция","abstract avatar"]
- ]
-};
-const $=s=>document.querySelector(s);
-const el={
- grid:$("#wallpaperGrid"),searchForm:$("#searchForm"),searchInput:$("#searchInput"),
- categoryRow:$("#categoryRow"),categoryArea:$("#categoryArea"),orientation:$("#orientationFilter"),sort:$("#sortSelect"),
- status:$("#resultStatus"),visibleCount:$("#visibleCount"),title:$("#sectionTitle"),subtitle:$("#sectionSubtitle"),
- sectionEyebrow:$("#sectionEyebrow"),loadMoreWrap:$("#loadMoreWrap"),loadMore:$("#loadMoreButton"),
- empty:$("#emptyState"),emptyTitle:$("#emptyTitle"),emptyDescription:$("#emptyDescription"),reset:$("#resetButton"),
- homeModes:[...document.querySelectorAll("[data-mode]")],favoritesNav:$("#favoritesNav"),favoriteCount:$("#favoriteCount"),
- heroTitle:$("#heroTitle"),heroDescription:$("#heroDescription"),heroEyebrow:$("#heroEyebrow"),heroMeta:$("#heroMeta"),
- collection:$("#collection"),factsSection:$("#factsSection"),sourceNote:$("#sourceNote"),
- modal:$("#imageModal"),modalClose:$("#modalClose"),modalImage:$("#modalImage"),modalTitle:$("#modalTitle"),
- modalFacts:$("#modalFacts"),modalCredit:$("#modalCredit"),modalFavorite:$("#modalFavorite"),download:$("#downloadLink"),
- source:$("#sourceLink"),license:$("#licenseNote"),toast:$("#toast"),settings:$("#settingsModal"),
- particlesToggle:$("#particlesToggle"),motionToggle:$("#motionToggle"),tiltToggle:$("#tiltToggle"),
- factLoading:$("#factLoading"),factContent:$("#factContent"),factError:$("#factError"),factTitle:$("#factTitle"),
- factExtract:$("#factExtract"),factImageWrap:$("#factImageWrap"),factImage:$("#factImage"),factSource:$("#factSource"),
- factCategory:$("#factCategory"),randomFact:$("#randomFactButton"),heroVisual:$("#heroVisual")
-};
-const state={items:[],continuation:null,loading:false,query:"wallpaper",category:"all",mode:"wallpapers",view:"all",orientation:"all",sort:"relevance",activeItem:null,requestId:0,factLoading:false,factRequestId:0,toastTimer:null};
-const defaults={theme:"dark",particles:true,motion:true,tilt:true};
-let settings=readSettings();
-let favorites=readFavorites();
-let factHistory=[];
-let canvasFrame=0;
-let particles=[];
-let canvasContext=null;
-let canvasWidth=0,canvasHeight=0,lastPointer={x:-1000,y:-1000};
-let systemThemeQuery=null;
-
-function readSettings(){try{return{...defaults,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")}}catch{return{...defaults}}}
-function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}catch(error){console.warn("Настройки не сохранены",error)}}
-function readFavorites(){try{const value=JSON.parse(localStorage.getItem(FAVORITES_KEY)||"[]");return Array.isArray(value)?value.filter(x=>x&&x.id&&x.thumb&&x.original):[]}catch{return[]}}
-function saveFavorites(){try{localStorage.setItem(FAVORITES_KEY,JSON.stringify(favorites));updateFavoriteCount()}catch{showToast("Не удалось сохранить: память браузера заполнена")}}
-function updateFavoriteCount(){el.favoriteCount.textContent=String(favorites.length)}
-function applyTheme(){
- const theme=settings.theme==="system"?(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):settings.theme;
- document.body.dataset.theme=theme;
- const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==="light"?"#f1f3f5":"#0c1018";
- document.querySelectorAll("[data-theme-choice]").forEach(button=>button.classList.toggle("is-active",button.dataset.themeChoice===settings.theme));
-}
-function applyEffects(){
- document.body.classList.toggle("effects-off",!settings.motion);
- document.body.classList.toggle("tilt-off",!settings.tilt);
- el.particlesToggle.checked=settings.particles;
- el.motionToggle.checked=settings.motion;
- el.tiltToggle.checked=settings.tilt;
- if(settings.particles)startParticles();else stopParticles();
-}
-function syncSettings(){applyTheme();applyEffects();saveSettings()}
-function openSettings(){el.settings.hidden=false;document.body.style.overflow="hidden";$("#settingsClose").focus()}
-function closeSettings(){el.settings.hidden=true;if(el.modal.hidden)document.body.style.overflow=""}
-function showToast(message){el.toast.textContent=message;el.toast.classList.add("is-visible");clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>el.toast.classList.remove("is-visible"),2300)}
-function cleanText(value){return String(value||"").replace(/<[^>]*>/g," ").replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;/g,"'").replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/\s+/g," ").trim()}
-function metadataValue(metadata,key){return cleanText(metadata&&metadata[key]&&metadata[key].value)}
-function commonsApiUrl(continuation){
- const params=new URLSearchParams({action:"query",format:"json",origin:"*",generator:"search",gsrnamespace:"6",gsrsearch:state.query,gsrlimit:"30",prop:"imageinfo",iiprop:"url|size|mime|extmetadata",iiurlwidth:"1100",iiextmetadatalanguage:"en"});
- if(continuation)Object.entries(continuation).forEach(([key,value])=>params.set(key,String(value)));
- return COMMONS_API+"?"+params.toString();
-}
-function wallhavenSearchQuery(){
- const query=state.query.trim();
- if(state.mode==="wallpapers"&&state.category==="all")return "";
- return query.replace(/\bwallpaper\b/gi,"").replace(/\s+/g," ").trim();
-}
-function normalizeWallhaven(image){
- if(!image||!image.path)return null;
- const width=Number(image.dimension_x)||0,height=Number(image.dimension_y)||0;
- const tags=(Array.isArray(image.tags)?image.tags:[]).map(tag=>cleanText(tag&&tag.name)).filter(Boolean).slice(0,3);
- const uploader=image.uploader&&image.uploader.username;
- return{
-  id:"wallhaven:"+String(image.id),
-  title:tags.join(" · ")||("Wallpaper "+String(image.id)),
-  thumb:image.thumbs&&(image.thumbs.large||image.thumbs.original)||image.path,
-  original:image.path,
-  pageUrl:image.url||image.short_url||("https://wallhaven.cc/w/"+image.id),
-  width,height,mime:cleanText(image.file_type||""),
-  artist:cleanText(uploader||"Автор не указан"),
-  license:"Права зависят от автора. SFW-фильтр не означает свободную лицензию.",
-  source:"Wallhaven"
- };
-}
-async function fetchWallhavenPage(page){
- const params=new URLSearchParams({purity:"100",categories:state.category==="anime"||state.category==="manga"||state.category==="lofi"?"010":"111",sorting:wallhavenSearchQuery()?"relevance":"date_added",order:"desc",page:String(page)});
- const query=wallhavenSearchQuery();
- if(query)params.set("q",query);
- if(state.orientation==="landscape")params.set("ratios","16x9,16x10,21x9");
- else if(state.orientation==="portrait")params.set("ratios","9x16,10x16,9x21");
- else if(state.orientation==="square")params.set("ratios","1x1");
- else if(state.mode==="avatars")params.set("ratios","1x1,3x4,4x5");
- const response=await fetch(WALLHAVEN_API+"?"+params.toString(),{headers:{Accept:"application/json"}});
- if(!response.ok)throw new Error("Wallhaven "+response.status);
- const data=await response.json(),meta=data.meta||{};
- const next=Number(meta.current_page||page)<Number(meta.last_page||page)?Number(meta.current_page||page)+1:null;
- return{provider:"Wallhaven",items:(data.data||[]).map(normalizeWallhaven).filter(Boolean),next};
-}
-function shouldLoadWaifu(){
- return (state.mode==="avatars"&&["all","anime"].includes(state.category))||["anime","manga","lofi"].includes(state.category)||/\b(anime|manga|waifu)\b/i.test(state.query);
-}
-function normalizeWaifu(image){
- if(!image||!image.url||image.is_nsfw===true)return null;
- const width=Number(image.width)||0,height=Number(image.height)||0;
- const tags=(Array.isArray(image.tags)?image.tags:[]).map(tag=>cleanText(tag&&tag.name||tag)).filter(Boolean).slice(0,3);
- const artist=image.artist&&(image.artist.name||image.artist);
- const pageUrl=typeof image.source==="string"&&/^https?:\/\//i.test(image.source)?image.source:"https://www.waifu.im/";
- return{
-  id:"waifuim:"+String(image.id||image.signature||image.url),
-  title:tags.join(" · ")||"Anime illustration",
-  thumb:image.preview_url||image.url,original:image.url,pageUrl,width,height,
-  mime:image.extension?"image/"+String(image.extension).replace(/^\./,""):"image",
-  artist:cleanText(artist||"Автор не указан"),
-  license:"Права принадлежат автору; условия использования смотри в исходной публикации.",
-  source:"Waifu.im"
- };
-}
-async function fetchWaifuPage(){
- const params=new URLSearchParams({is_nsfw:"false",many:"true",included_tags:"waifu"});
- if(state.orientation==="landscape")params.set("orientation","LANDSCAPE");
- else if(state.orientation==="portrait")params.set("orientation","PORTRAIT");
- const response=await fetch("https://api.waifu.im/search/?"+params.toString(),{headers:{Accept:"application/json"}});
- if(!response.ok)throw new Error("Waifu.im "+response.status);
- const data=await response.json();
- return{provider:"Waifu.im",items:(data.images||[]).map(normalizeWaifu).filter(Boolean),next:null};
-}
-function openverseQuery(){
- const query=state.query.trim();
- if(state.mode==="avatars")return query;
- return query;
-}
-function articQuery(){
- const q=(state.query+" "+state.category).toLowerCase();
- if(/anime|manga|japan|pixel|avatar/.test(q))return "Japanese art print";
- if(/car|auto/.test(q))return "automobile";
- if(/space|galaxy|nebula/.test(q))return "abstract art";
- if(/nature|mountain|forest|ocean/.test(q))return "landscape";
- if(/city|cyberpunk|gaming|game/.test(q))return "city night";
- if(/minimal|abstract|dark/.test(q))return "abstract art";
- return "illustration";
-}
-function normalizePage(page){
- const info=page.imageinfo&&page.imageinfo[0];if(!info||!info.thumburl||!info.url)return null;
- if(info.mime&&!info.mime.startsWith("image/"))return null;
- const metadata=info.extmetadata||{},width=Number(info.width)||0,height=Number(info.height)||0;
- return{id:"commons:"+String(page.pageid),title:cleanText((page.title||"Image").replace(/^File:/i,"").replace(/\\.[^.]+$/,"")),thumb:info.thumburl,original:info.url,pageUrl:info.descriptionurl||"https://commons.wikimedia.org/",width,height,mime:info.mime||"",artist:metadataValue(metadata,"Artist")||metadataValue(metadata,"Credit")||"Автор не указан",license:metadataValue(metadata,"LicenseShortName")||metadataValue(metadata,"UsageTerms")||"Условия на странице файла",source:"Wikimedia Commons"};
-}
-function normalizeOpenverse(item){
- if(!item||!item.url||!item.foreign_landing_url)return null;
- const width=Number(item.width)||0,height=Number(item.height)||0;
- const filetype=String(item.filetype||"").toLowerCase();
- if(filetype&&!["jpg","jpeg","png","webp","gif","avif"].includes(filetype))return null;
- const license=[item.license,item.license_version].filter(Boolean).join(" ").toUpperCase();
- return{id:"openverse:"+String(item.id),title:cleanText(item.title||"Openverse image")||"Untitled image",thumb:item.thumbnail||item.url,original:item.url,pageUrl:item.foreign_landing_url,width,height,mime:filetype?"image/"+filetype:"",artist:cleanText(item.creator||"Автор не указан"),license:license||"Проверь лицензию на странице файла",source:"Openverse"};
-}
-function normalizeArtic(item){
- if(!item||!item.image_id||item.is_public_domain!==true)return null;
- const id=String(item.image_id);
- const title=cleanText(item.title||"Artwork");
- return{id:"artic:"+String(item.id),title,thumb:"https://www.artic.edu/iiif/2/"+encodeURIComponent(id)+"/full/843,/0/default.jpg",original:"https://www.artic.edu/iiif/2/"+encodeURIComponent(id)+"/full/2000,/0/default.jpg",pageUrl:"https://www.artic.edu/artworks/"+item.id,width:0,height:0,mime:"image/jpeg",artist:cleanText(item.artist_display||"Art Institute of Chicago"),license:"Public Domain · Open Access",source:"Art Institute of Chicago"};
-}
-function metQuery(){
- const q=(state.query+" "+state.category).toLowerCase();
- if(/anime|japan|avatar|pixel/.test(q))return "Japanese";
- if(/car|auto/.test(q))return "automobile";
- if(/space|galaxy|nebula/.test(q))return "space";
- if(/nature|mountain|forest|ocean/.test(q))return "landscape";
- if(/city|cyberpunk|gaming|game/.test(q))return "fantasy";
- if(/minimal|abstract|dark/.test(q))return "abstract";
- return "illustration";
-}
-function normalizeMet(item){
- if(!item||item.isPublicDomain!==true||!item.primaryImage)return null;
- return{id:"met:"+String(item.objectID),title:cleanText(item.title||"Museum artwork"),thumb:item.primaryImageSmall||item.primaryImage,original:item.primaryImage,pageUrl:item.objectURL||"https://www.metmuseum.org/art/collection",width:0,height:0,mime:"image/jpeg",artist:cleanText(item.artistDisplayName||"The Metropolitan Museum of Art"),license:"Public Domain · Open Access",source:"The Metropolitan Museum of Art"};
-}
-async function fetchMetPage(offset){
- const searchParams=new URLSearchParams({hasImages:"true",isPublicDomain:"true",q:metQuery()});
- const searchResponse=await fetch("https://collectionapi.metmuseum.org/public/collection/v1/search?"+searchParams.toString());
- if(!searchResponse.ok)throw new Error("The Met "+searchResponse.status);
- const searchData=await searchResponse.json(),ids=searchData.objectIDs||[],start=Number(offset)||0,batch=ids.slice(start,start+6);
- const objects=await Promise.allSettled(batch.map(async id=>{
-  const response=await fetch("https://collectionapi.metmuseum.org/public/collection/v1/objects/"+id);
-  if(!response.ok)throw new Error("The Met object "+response.status);
-  return response.json();
- }));
- const items=objects.filter(result=>result.status==="fulfilled").map(result=>normalizeMet(result.value)).filter(Boolean);
- const next=start+batch.length<ids.length?start+batch.length:null;
- return{provider:"The Metropolitan Museum of Art",items,next};
-}
-function shouldLoadNasa(){
- return /space|galaxy|nebula|planet|cosmos|космос|планет/i.test(state.query+" "+state.category);
-}
-async function fetchCommonsPage(cursor){
- const response=await fetch(commonsApiUrl(cursor));if(!response.ok)throw new Error("Wikimedia Commons "+response.status);
- const data=await response.json(),pages=Object.values(data.query&&data.query.pages?data.query.pages:{});
- return{provider:"Wikimedia Commons",items:pages.map(normalizePage).filter(Boolean),next:data.continue||null};
-}
-async function fetchOpenversePage(nextUrl){
- const url=nextUrl||("https://api.openverse.org/v1/images/?"+new URLSearchParams({q:openverseQuery(),page_size:"30"}).toString());
- const response=await fetch(url,{headers:{Accept:"application/json"}});if(!response.ok)throw new Error("Openverse "+response.status);
- const data=await response.json();
- return{provider:"Openverse",items:(data.results||[]).map(normalizeOpenverse).filter(Boolean),next:data.next||null};
-}
-async function fetchArticPage(page){
- const params=new URLSearchParams({q:articQuery(),limit:"24",page:String(page),fields:"id,title,artist_display,image_id,is_public_domain,date_display"});
- params.set("query[term][is_public_domain]","true");
- const response=await fetch("https://api.artic.edu/api/v1/artworks/search?"+params.toString());if(!response.ok)throw new Error("Art Institute "+response.status);
- const data=await response.json(),pagination=data.pagination||{};
- const next=Number(pagination.current_page||page)<Number(pagination.total_pages||0)?Number(pagination.current_page||page)+1:null;
- return{provider:"Art Institute of Chicago",items:(data.data||[]).map(normalizeArtic).filter(Boolean),next};
-}
-async function fetchNasaPage(page){
- const params=new URLSearchParams({q:state.query+" space",media_type:"image",page_size:"30",page:String(page)});
- const response=await fetch("https://images-api.nasa.gov/search?"+params.toString());if(!response.ok)throw new Error("NASA "+response.status);
- const data=await response.json(),items=[];
- (data.collection&&data.collection.items||[]).forEach(entry=>{
-  const meta=(entry.data||[])[0]||{},preview=(entry.links||[]).find(link=>link.rel==="preview")||(entry.links||[])[0];
-  if(!preview||!preview.href||!meta.nasa_id)return;
-  const original=preview.href.replace(/~thumb(?=\\.[a-z0-9]+(?:$|\\?))/i,"~orig");
-  items.push({id:"nasa:"+meta.nasa_id,title:cleanText(meta.title||"NASA image"),thumb:preview.href,original,pageUrl:entry.href||"https://images.nasa.gov/",width:0,height:0,mime:"image/jpeg",artist:cleanText(meta.photographer||meta.center||"NASA"),license:"NASA media · проверь условия конкретного файла",source:"NASA Image and Video Library"});
- });
- const paging=data.collection&&data.collection.metadata||{};
- const next=Number(paging.total_hits||0)>0&&items.length>=20?page+1:null;
- return{provider:"NASA Image and Video Library",items,next};
-}
-async function loadWallpapers(append=false){
- if(append&&state.loading)return;
- const currentCursor=append?(state.continuation||{}):{wallhaven:1,commons:null,openverse:null};
- if(append&&!currentCursor.wallhaven&&!currentCursor.commons&&!currentCursor.openverse)return;
- const requestId=++state.requestId;state.loading=true;el.loadMore.disabled=true;el.loadMore.textContent="Ищем...";
- if(!append){state.items=[];el.grid.innerHTML='<div class="loading-state"><span class="loader"></span><p>Ищем обои в специализированных каталогах...</p></div>';el.empty.hidden=true;el.loadMoreWrap.hidden=true}
- const tasks=[];
- if(!append||currentCursor.wallhaven)tasks.push(fetchWallhavenPage(currentCursor.wallhaven||1));
- if(!append&&shouldLoadWaifu())tasks.push(fetchWaifuPage());
- if(append&&currentCursor.commons)tasks.push(fetchCommonsPage(currentCursor.commons));
- if(append&&currentCursor.openverse)tasks.push(fetchOpenversePage(currentCursor.openverse));
- const runTasks=async list=>Promise.all(list.map(async task=>{try{return await task}catch(error){return{provider:"Источник недоступен",items:[],next:null,error}}}));
- let results=await runTasks(tasks);
- if(requestId!==state.requestId)return;
- const wallhavenResult=results.find(result=>result.provider==="Wallhaven");
- const hasWallpaperResults=Boolean(wallhavenResult&&!wallhavenResult.error&&wallhavenResult.items.length);
- if(!append&&!hasWallpaperResults){
-  const fallback=await runTasks([fetchCommonsPage(null),fetchOpenversePage(null)]);
-  if(requestId!==state.requestId)return;
-  results=results.concat(fallback);
- }
- const failed=results.filter(result=>result.error);
- const successful=results.filter(result=>!result.error);
- const seenIds=new Set(state.items.map(item=>item.id));
- const seenUrls=new Set(state.items.map(item=>item.original));
- successful.forEach(result=>result.items.forEach(item=>{
-  if(!seenIds.has(item.id)&&!seenUrls.has(item.original)&&(item.width===0||item.height===0||Math.max(item.width,item.height)>=360)){
-   state.items.push(item);seenIds.add(item.id);seenUrls.add(item.original);
-  }
- }));
- state.continuation={
-  wallhaven:successful.find(result=>result.provider==="Wallhaven")?.next||null,
-  commons:successful.find(result=>result.provider==="Wikimedia Commons")?.next||null,
-  openverse:successful.find(result=>result.provider==="Openverse")?.next||null
- };
- const hasMore=Object.values(state.continuation).some(Boolean);
- state.loading=false;renderGrid();
- const providerNames=successful.filter(result=>result.items.length).map(result=>result.provider);
- el.status.textContent=providerNames.length?providerNames.join(" · "):"Каталоги временно недоступны";
- el.loadMoreWrap.hidden=!hasMore||state.view==="favorites";el.loadMore.disabled=false;el.loadMore.innerHTML='Показать ещё <span>↓</span>';
- if(!state.items.length){
-  el.empty.hidden=false;el.emptyTitle.textContent=failed.length===results.length?"Не удалось подключиться к каталогам":"Под эту тему пока нет изображений";
-  el.emptyDescription.textContent="Попробуй другое название или повтори загрузку. Основной поиск рассчитан на готовые обои, а открытые медиатеки используются как резерв.";
-  el.loadMoreWrap.hidden=false;
- }else if(failed.length===results.length){
-  showToast("Каталоги изображений временно не отвечают");
- }
-}
-function visibleItems(){
- const list=state.view==="favorites"?favorites:state.items;
- let result=list.filter(item=>state.orientation==="landscape"?item.width>item.height:state.orientation==="portrait"?item.height>item.width:state.orientation==="square"?item.width===item.height:true);
- if(state.sort==="resolution")result=result.slice().sort((a,b)=>b.width*b.height-a.width*a.height);
- else if(state.sort==="title")result=result.slice().sort((a,b)=>a.title.localeCompare(b.title));
- else if(state.sort==="random")result=result.slice().sort((a,b)=>hash(a.id)-hash(b.id));
- return result;
-}
-function hash(value){let n=0;for(let i=0;i<value.length;i++)n=((n<<5)-n+value.charCodeAt(i))|0;return Math.abs(n)}
-function isFavorite(id){return favorites.some(item=>item.id===id)}
-function makeCard(item,index){
- const card=document.createElement("article");card.className="wallpaper-card";card.style.animationDelay=Math.min(index*35,350)+"ms";
- const wrap=document.createElement("div");wrap.className="card-image-wrap";wrap.tabIndex=0;wrap.setAttribute("role","button");wrap.setAttribute("aria-label","Открыть "+item.title);
- const img=document.createElement("img");img.className="card-image";img.alt=item.title;img.loading="lazy";img.decoding="async";img.addEventListener("load",()=>img.classList.add("is-loaded"),{once:true});img.addEventListener("error",()=>card.remove(),{once:true});img.src=item.thumb;if(img.complete&&img.naturalWidth)img.classList.add("is-loaded");
- const overlay=document.createElement("div");overlay.className="card-overlay";
- const fav=document.createElement("button");fav.className="favorite-button"+(isFavorite(item.id)?" is-favorite":"");fav.type="button";fav.textContent=isFavorite(item.id)?"♥":"♡";fav.setAttribute("aria-label",isFavorite(item.id)?"Убрать из избранного":"Добавить в избранное");
- fav.addEventListener("click",event=>{event.stopPropagation();toggleFavorite(item);const saved=isFavorite(item.id);fav.classList.toggle("is-favorite",saved);fav.textContent=saved?"♥":"♡";fav.setAttribute("aria-label",saved?"Убрать из избранного":"Добавить в избранное")});
- overlay.append(fav);wrap.append(img,overlay);wrap.addEventListener("click",()=>openImage(item));wrap.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openImage(item)}});
- const caption=document.createElement("div");caption.className="card-caption";const title=document.createElement("span");title.className="card-title";title.textContent=item.title;title.title=item.title;const size=document.createElement("span");size.className="card-size";size.textContent=item.width&&item.height?item.width+"×"+item.height:"IMAGE";caption.append(title,size);const provider=document.createElement("div");provider.className="card-provider";provider.textContent=item.source||"Открытый источник";card.append(wrap,caption,provider);
- if(settings.tilt&&!matchMedia("(pointer: coarse)").matches){
-  card.addEventListener("pointermove",event=>{const r=card.getBoundingClientRect(),x=(event.clientX-r.left)/r.width-.5,y=(event.clientY-r.top)/r.height-.5;card.style.transform="perspective(850px) rotateX("+(-y*4)+"deg) rotateY("+(x*5)+"deg) translateY(-2px)"});
-  card.addEventListener("pointerleave",()=>{card.style.transform=""});
- }
- return card;
-}
-function renderGrid(){
- const items=visibleItems();el.grid.innerHTML="";el.empty.hidden=items.length>0;el.visibleCount.textContent=items.length+" изображений";
- if(state.view==="favorites"){el.title.textContent="Сохранённое";el.subtitle.textContent="Твои изображения, сохранённые в этом браузере.";el.status.textContent="Личная коллекция";el.loadMoreWrap.hidden=true;el.categoryArea.hidden=true;if(!items.length){el.emptyTitle.textContent="Пока ничего нет";el.emptyDescription.textContent="Нажимай на сердечко, чтобы сохранять понравившиеся изображения."}}
- else{el.title.textContent=state.mode==="avatars"?"Аватарки под настроение":"Обои под настроение";el.subtitle.textContent=state.mode==="avatars"?"Квадратные иллюстрации и персонажи для профиля.":"Подборка изображений, которые можно поставить фоном на телефон или компьютер.";el.categoryArea.hidden=false;el.loadMoreWrap.hidden=!state.continuation}
- items.forEach((item,index)=>el.grid.append(makeCard(item,index)));
- if(state.view==="all"&&!state.loading&&!state.items.length)el.empty.hidden=false;
-}
-function toggleFavorite(item){
- if(isFavorite(item.id)){favorites=favorites.filter(x=>x.id!==item.id);showToast("Удалено из сохранённого")}else{favorites.unshift(item);showToast("Добавлено в сохранённое")}
- saveFavorites();if(state.view==="favorites")renderGrid();if(state.activeItem&&state.activeItem.id===item.id)updateModalFavorite();
-}
-function updateModalFavorite(){const saved=state.activeItem&&isFavorite(state.activeItem.id);el.modalFavorite.classList.toggle("is-favorite",Boolean(saved));el.modalFavorite.textContent=saved?"♥":"♡";el.modalFavorite.setAttribute("aria-label",saved?"Убрать из избранного":"Добавить в избранное")}
-function addFact(label,value){if(!value)return;const span=document.createElement("span");span.textContent=label+": "+value;el.modalFacts.append(span)}
-function openImage(item){
- state.activeItem=item;el.modalImage.src=item.original;el.modalImage.alt=item.title;el.modalTitle.textContent=item.title;el.modalFacts.innerHTML="";
- addFact("Размер",item.width&&item.height?item.width+" × "+item.height:"Не указан");addFact("Формат",item.mime.replace("image/","").toUpperCase());addFact("Источник",item.source);addFact("Лицензия",item.license);
- el.modalCredit.textContent="Автор / источник: "+item.artist;el.download.href=item.original;el.source.href=item.pageUrl;el.license.textContent="Перед использованием проверь лицензию на странице оригинала. Некоторые лицензии требуют указания автора или сохранения той же лицензии.";
- updateModalFavorite();el.modal.hidden=false;document.body.style.overflow="hidden";el.modalClose.focus();
-}
-function closeImage(){el.modal.hidden=true;document.body.style.overflow="";state.activeItem=null}
-function setCategoryButtons(){
- const list=CATEGORIES[state.mode==="avatars"?"avatars":"wallpapers"];el.categoryRow.innerHTML="";
- list.forEach(([id,label])=>{const button=document.createElement("button");button.type="button";button.className="category-chip"+(state.category===id?" is-active":"");button.dataset.category=id;button.textContent=label;el.categoryRow.append(button)});
-}
-function switchMode(mode){
- state.mode=mode;state.view="all";state.category="all";state.continuation=null;state.orientation="all";state.sort="relevance";el.orientation.value="all";el.sort.value="relevance";el.searchInput.value="";
- el.homeModes.forEach(button=>button.classList.toggle("is-active",button.dataset.mode===mode));
- const facts=mode==="facts";el.searchForm.hidden=facts;el.heroVisual.hidden=facts;el.heroMeta.hidden=facts;el.categoryArea.hidden=facts;el.collection.hidden=facts;el.factsSection.hidden=!facts;el.sourceNote.hidden=false;
- if(mode==="wallpapers"){el.heroEyebrow.textContent="YOUR SCREEN. YOUR VIBE.";el.heroTitle.innerHTML='Твой экран.<br><em>Твои правила.</em>';el.heroDescription.textContent="Обои для телефона и компьютера: аниме, игры, минимализм, киберпанк и другие стили.";el.heroMeta.innerHTML="<span><i>✳</i> Обои для любых экранов</span><span><i>↗</i> Открытые источники</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR WALLPAPER";el.title.textContent="Подбери настроение.";state.query="wallpaper"}
- if(mode==="avatars"){el.heroEyebrow.textContent="YOUR PROFILE. YOUR STYLE.";el.heroTitle.innerHTML='Твой профиль.<br><em>Твой персонаж.</em>';el.heroDescription.textContent="Аватарки, персонажи, пиксель-арт и иллюстрации — выбери изображение для своего профиля.";el.heroMeta.innerHTML="<span><i>◉</i> Квадратные и портретные</span><span><i>✳</i> Разные стили</span><span><i>♡</i> Своё избранное</span>";el.sectionEyebrow.textContent="FIND YOUR AVATAR";state.query="avatar portrait illustration"}
- if(mode==="facts"){el.heroEyebrow.textContent="RANDOM KNOWLEDGE";el.heroTitle.innerHTML='Случайное.<br><em>Но интересное.</em>';el.heroDescription.textContent="Каждое нажатие открывает новую статью из русской Википедии. Узнавай то, о чём даже не собирался искать.";el.sectionEyebrow.textContent="WIKIPEDIA DISCOVERY";fetchRandomFact()}
- setCategoryButtons();el.homeModes.forEach(b=>b.classList.toggle("is-active",b.dataset.mode===mode));
- if(!facts){el.status.textContent="Открытая медиатека";loadWallpapers(false)}
-}
-function chooseCategory(category){
- state.category=category;state.view="all";const categoryList=CATEGORIES[state.mode==="avatars"?"avatars":"wallpapers"];const entry=categoryList.find(x=>x[0]===category)||categoryList[0];state.query=entry[2];
- state.continuation=null;el.homeModes.forEach(b=>b.classList.toggle("is-active",b.dataset.mode===state.mode));el.categoryRow.querySelectorAll(".category-chip").forEach(b=>b.classList.toggle("is-active",b.dataset.category===category));
- if(category==="all")state.query=state.mode==="avatars"?"avatar illustration":"wallpaper";
- el.favoritesNav.classList.remove("is-active");loadWallpapers(false);
-}
-async function fetchRandomFact(){
- if(state.factLoading)return;state.factLoading=true;const requestId=++state.factRequestId;el.randomFact.disabled=true;el.randomFact.innerHTML='<span class="random-icon">⟳</span> Ищем новую статью...';el.factLoading.hidden=false;el.factContent.hidden=true;el.factError.hidden=true;el.factCard.classList.remove("is-changing");
- const params=new URLSearchParams({action:"query",format:"json",origin:"*",generator:"random",grnnamespace:"0",grnlimit:"1",prop:"extracts|pageimages|info",exintro:"1",explaintext:"1",exchars:"1100",piprop:"thumbnail",pithumbsize:"1000",inprop:"url"});
- try{
-  let article=null;
-  for(let attempt=0;attempt<4&&!article;attempt++){
-   const response=await fetch(WIKI_API+"?"+params.toString());if(!response.ok)throw new Error("Wikipedia API: "+response.status);
-   const data=await response.json();if(requestId!==state.factRequestId)return;
-   const pages=Object.values(data.query&&data.query.pages?data.query.pages:{}),page=pages[0];
-   if(page&&page.extract&&page.extract.trim().length>90&&!factHistory.includes(page.pageid))article=page;
-   if(page)factHistory.push(page.pageid);if(factHistory.length>30)factHistory.shift();
-  }
-  if(!article)throw new Error("No article returned");
-  el.factTitle.textContent=article.title||"Случайная статья";el.factExtract.textContent=article.extract.trim();
-  el.factSource.href=article.fullurl||"https://ru.wikipedia.org/wiki/"+encodeURIComponent(article.title||"");
-  const thumbnail=article.thumbnail&&article.thumbnail.source;
-  if(thumbnail){el.factImage.src=thumbnail;el.factImage.alt=article.title||"Иллюстрация к статье";el.factImageWrap.hidden=false}else el.factImageWrap.hidden=true;
-  el.factCategory.textContent="Википедия · Русский язык · Случайная статья";
-  el.factLoading.hidden=true;el.factContent.hidden=false;el.factCard.classList.remove("is-changing");void el.factCard.offsetWidth;el.factCard.classList.add("is-changing");
- }catch(error){if(requestId!==state.factRequestId)return;el.factLoading.hidden=true;el.factError.hidden=false;showToast("Не удалось получить случайную статью")}
- finally{if(requestId===state.factRequestId){state.factLoading=false;el.randomFact.disabled=false;el.randomFact.innerHTML='<span class="random-icon">⟳</span> Другая случайная статья <span>↗</span>'}}
-}
-function startParticles(){
- if(canvasFrame)return;const canvas=$("#ambientCanvas");canvasContext=canvas.getContext("2d");if(!canvasContext)return;
- resizeCanvas();particles=Array.from({length:Math.min(55,Math.max(22,Math.round(window.innerWidth/25)))},()=>newParticle());
- const draw=()=>{
-  if(!settings.particles){canvasFrame=0;return}
-  canvasContext.clearRect(0,0,canvasWidth,canvasHeight);
-  const accent=getComputedStyle(document.body).getPropertyValue("--accent").trim()||"#c5f36b";
-  particles.forEach((p,i)=>{p.x+=p.vx;p.y+=p.vy;if(p.x<-10)p.x=canvasWidth+10;if(p.x>canvasWidth+10)p.x=-10;if(p.y<-10)p.y=canvasHeight+10;if(p.y>canvasHeight+10)p.y=-10;
-   const dx=p.x-lastPointer.x,dy=p.y-lastPointer.y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<85&&dist>0){p.x+=dx/dist*.14;p.y+=dy/dist*.14}
-   canvasContext.globalAlpha=p.alpha;canvasContext.fillStyle=accent;canvasContext.beginPath();canvasContext.arc(p.x,p.y,p.r,0,Math.PI*2);canvasContext.fill();
-   if(i%5===0){const next=particles[(i+1)%particles.length],d=Math.hypot(p.x-next.x,p.y-next.y);if(d<125){canvasContext.globalAlpha=(1-d/125)*.12;canvasContext.strokeStyle=accent;canvasContext.lineWidth=.7;canvasContext.beginPath();canvasContext.moveTo(p.x,p.y);canvasContext.lineTo(next.x,next.y);canvasContext.stroke()}}
-  });
-  canvasContext.globalAlpha=1;canvasFrame=requestAnimationFrame(draw);
- };
- canvasFrame=requestAnimationFrame(draw);
-}
-function newParticle(){return{x:Math.random()*canvasWidth,y:Math.random()*canvasHeight,vx:(Math.random()-.5)*.24,vy:(Math.random()-.5)*.24,r:Math.random()*1.7+.45,alpha:Math.random()*.32+.08}}
-function resizeCanvas(){const canvas=$("#ambientCanvas"),dpr=Math.min(window.devicePixelRatio||1,1.5);canvasWidth=window.innerWidth;canvasHeight=window.innerHeight;canvas.width=Math.floor(canvasWidth*dpr);canvas.height=Math.floor(canvasHeight*dpr);canvasContext.setTransform(dpr,0,0,dpr,0,0)}
-function stopParticles(){if(canvasFrame)cancelAnimationFrame(canvasFrame);canvasFrame=0;if(canvasContext)canvasContext.clearRect(0,0,canvasWidth,canvasHeight)}
-function setupEvents(){
- el.searchForm.addEventListener("submit",event=>{event.preventDefault();const q=el.searchInput.value.trim();if(!q){chooseCategory("all");return}state.category="search";state.query=q;state.view="all";state.continuation=null;el.categoryRow.querySelectorAll(".category-chip").forEach(b=>b.classList.remove("is-active"));loadWallpapers(false)});
- el.categoryRow.addEventListener("click",event=>{const button=event.target.closest("[data-category]");if(button)chooseCategory(button.dataset.category)});
- el.orientation.addEventListener("change",()=>{state.orientation=el.orientation.value;renderGrid()});el.sort.addEventListener("change",()=>{state.sort=el.sort.value;renderGrid()});
- el.loadMore.addEventListener("click",()=>{const canContinue=state.continuation&&Object.values(state.continuation).some(Boolean);loadWallpapers(Boolean(canContinue))});
- el.homeModes.forEach(button=>button.addEventListener("click",()=>switchMode(button.dataset.mode)));
- el.favoritesNav.addEventListener("click",()=>{state.view="favorites";el.homeModes.forEach(b=>b.classList.remove("is-active"));renderGrid();el.collection.scrollIntoView({behavior:"smooth",block:"start"})});
- el.modalClose.addEventListener("click",closeImage);$("#modalBackdrop").addEventListener("click",closeImage);el.modalFavorite.addEventListener("click",()=>{if(state.activeItem)toggleFavorite(state.activeItem)});
- el.reset.addEventListener("click",()=>{el.orientation.value="all";el.sort.value="relevance";state.orientation="all";state.sort="relevance";chooseCategory("all")});
- $("#openSettings").addEventListener("click",openSettings);$("#settingsClose").addEventListener("click",closeSettings);$("#settingsBackdrop").addEventListener("click",closeSettings);
- document.querySelectorAll("[data-theme-choice]").forEach(button=>button.addEventListener("click",()=>{settings.theme=button.dataset.themeChoice;syncSettings()}));
- el.particlesToggle.addEventListener("change",()=>{settings.particles=el.particlesToggle.checked;syncSettings()});
- el.motionToggle.addEventListener("change",()=>{settings.motion=el.motionToggle.checked;syncSettings()});
- el.tiltToggle.addEventListener("change",()=>{settings.tilt=el.tiltToggle.checked;syncSettings();renderGrid()});
- $("#resetSettings").addEventListener("click",()=>{settings={...defaults};syncSettings();showToast("Настройки сброшены")});
- el.randomFact.addEventListener("click",fetchRandomFact);
- document.addEventListener("keydown",event=>{if(event.key==="Escape"){if(!el.settings.hidden)closeSettings();if(!el.modal.hidden)closeImage()}});
- window.addEventListener("resize",()=>{if(settings.particles){resizeCanvas();particles=Array.from({length:Math.min(55,Math.max(22,Math.round(window.innerWidth/25)))},()=>newParticle())}});
- window.addEventListener("pointermove",event=>{lastPointer.x=event.clientX;lastPointer.y=event.clientY},{passive:true});
- if(window.matchMedia){systemThemeQuery=window.matchMedia("(prefers-color-scheme: light)");systemThemeQuery.addEventListener?.("change",()=>{if(settings.theme==="system")applyTheme()})}
-}
-function init(){const year=$("#currentYear");if(year)year.textContent=String(new Date().getFullYear());updateFavoriteCount();applyTheme();applyEffects();setupEvents();switchMode("wallpapers")}
-init();
+(()=>{"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const COLORS=["#a8f078","#75d9c2","#8c9cff","#f4bb69","#f18eaa","#b995f5","#55b9dc","#f1dc75"];
+const defaults=[{id:1,name:"Пицца",weight:1,color:COLORS[0]},{id:2,name:"Бургер",weight:1,color:COLORS[1]},{id:3,name:"Суши",weight:1,color:COLORS[2]},{id:4,name:"Паста",weight:1,color:COLORS[3]}];
+let options=defaults.map(x=>({...x})),rotation=0,spinning=false,theme="dark",soundOn=true,particlesOn=true,reduceMotion=false,weatherType="cloud",audioCtx=null,map=null,mapMarker=null,pendingPoint=null,currentLocation=null,toastTimer=0,weatherRequest=0;
+const settings={sound:true,particles:true,motion:false,theme:"dark"};
+const saved=(()=>{try{return JSON.parse(localStorage.getItem("multitool-settings")||"{}")}catch{return {}}})();
+Object.assign(settings,saved);soundOn=settings.sound!==false;particlesOn=settings.particles!==false;reduceMotion=!!settings.motion;theme=settings.theme||"dark";
+function persist(){Object.assign(settings,{sound:soundOn,particles:particlesOn,motion:reduceMotion,theme});try{localStorage.setItem("multitool-settings",JSON.stringify(settings))}catch{}}
+function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2400)}
+function beep(freq=440,duration=.09,type="sine",volume=.035){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch{}}
+function applyPrefs(){document.body.dataset.theme=theme==="system"?(matchMedia("(prefers-color-scheme:light)").matches?"light":"dark"):theme;document.body.classList.toggle("reduce-motion",reduceMotion);$("#soundIcon").textContent=soundOn?"♫":"♩";$("#soundToggle").setAttribute("aria-label",soundOn?"Выключить звук":"Включить звук");$("#prefSound").checked=soundOn;$("#prefParticles").checked=particlesOn;$("#prefMotion").checked=reduceMotion;$("#prefTheme").value=theme;if(!particlesOn)clearAtmosphere();else drawAtmosphere()}
+function openPage(name){const page=$("#page-"+name);if(!page)return;$$(".page").forEach(p=>p.classList.remove("active"));page.classList.add("active");$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===name));$("#headerStatus").textContent=({home:"ВСЁ ДЛЯ ТВОЕГО МОМЕНТА",roulette:"LET THE WHEEL DECIDE",tictactoe:"THINK BEFORE YOU MOVE",snake:"CLASSIC ARCADE",weather:"WEATHER AROUND YOU"})[name];if(name==="weather"){setTimeout(()=>{initMap();if(map)map.invalidateSize()},120)}window.scrollTo({top:0,behavior:reduceMotion?"auto":"smooth"});beep(360,.045,"sine",.018)}
+$$("[data-page]").forEach(b=>b.addEventListener("click",()=>openPage(b.dataset.page)));
+$$("[data-open]").forEach(b=>b.addEventListener("click",()=>openPage(b.dataset.open)));
+$("#themeToggle").addEventListener("click",()=>{theme=theme==="light"?"dark":"light";applyPrefs();persist();beep(520)});
+$("#soundToggle").addEventListener("click",()=>{soundOn=!soundOn;applyPrefs();persist();if(soundOn)beep(600)});
+$("#settingsButton").addEventListener("click",()=>$("#settingsModal").hidden=false);
+$("#settingsClose").addEventListener("click",()=>$("#settingsModal").hidden=true);
+$("#settingsBackdrop").addEventListener("click",()=>$("#settingsModal").hidden=true);
+$("#prefSound").addEventListener("change",e=>{soundOn=e.target.checked;applyPrefs();persist();beep(500)});
+$("#prefParticles").addEventListener("change",e=>{particlesOn=e.target.checked;applyPrefs();persist()});
+$("#prefMotion").addEventListener("change",e=>{reduceMotion=e.target.checked;applyPrefs();persist()});
+$("#prefTheme").addEventListener("change",e=>{theme=e.target.value;applyPrefs();persist()});
+$("#year").textContent=new Date().getFullYear();
+const wheel=$("#wheelCanvas"),wctx=wheel.getContext("2d");
+function drawWheel(){const c=wheel,ctx=wctx,size=c.width,center=size/2,r=size/2-13;ctx.clearRect(0,0,size,size);if(!options.length){ctx.fillStyle="#273244";ctx.beginPath();ctx.arc(center,center,r,0,Math.PI*2);ctx.fill();return}const total=options.reduce((s,o)=>s+Math.max(.01,Number(o.weight)||.01),0);let a=-Math.PI/2+rotation;options.forEach((o,i)=>{const sweep=Math.PI*2*(Math.max(.01,Number(o.weight)||.01)/total),end=a+sweep;ctx.beginPath();ctx.moveTo(center,center);ctx.arc(center,center,r,a,end);ctx.closePath();ctx.fillStyle=o.color;ctx.fill();ctx.strokeStyle="rgba(8,13,19,.55)";ctx.lineWidth=4;ctx.stroke();ctx.save();ctx.translate(center,center);ctx.rotate(a+sweep/2);ctx.textAlign="right";ctx.fillStyle="#111923";ctx.font="700 "+Math.max(14,Math.min(22,200/options.length))+"px DM Sans";let name=o.name;while(ctx.measureText(name).width>r*.68&&name.length>4)name=name.slice(0,-2)+"…";ctx.fillText(name,r-27,7);ctx.restore();a=end});ctx.beginPath();ctx.arc(center,center,r,0,Math.PI*2);ctx.strokeStyle="rgba(255,255,255,.18)";ctx.lineWidth=5;ctx.stroke();for(let i=0;i<12;i++){const a=i*Math.PI/6;ctx.beginPath();ctx.arc(center+Math.cos(a)*(r-6),center+Math.sin(a)*(r-6),3,0,Math.PI*2);ctx.fillStyle="rgba(255,255,255,.75)";ctx.fill()}}
+function renderOptions(){const list=$("#optionList");list.innerHTML="";options.forEach(o=>{const row=document.createElement("div");row.className="option-row";const dot=document.createElement("i");dot.className="option-color";dot.style.background=o.color;dot.style.color=o.color;const name=document.createElement("input");name.className="option-name";name.value=o.name;name.maxLength=42;name.setAttribute("aria-label","Название варианта");name.addEventListener("change",()=>{o.name=name.value.trim()||"Без названия";name.value=o.name;drawWheel()});const weight=document.createElement("input");weight.className="option-weight";weight.type="number";weight.min=".1";weight.max="100";weight.step=".1";weight.value=o.weight;weight.title="Вес варианта";weight.setAttribute("aria-label","Вес варианта");weight.addEventListener("change",()=>{o.weight=Math.max(.1,Math.min(100,Number(weight.value)||.1));weight.value=o.weight;drawWheel()});const remove=document.createElement("button");remove.className="option-remove";remove.textContent="×";remove.title="Удалить";remove.setAttribute("aria-label","Удалить "+o.name);remove.addEventListener("click",()=>{options=options.filter(x=>x.id!==o.id);renderOptions()});row.append(dot,name,weight,remove);list.append(row)});$("#itemCount").textContent=options.length+" ВАРИАНТА";$("#spinButton").disabled=options.length<2||spinning;drawWheel()}
+function addOption(){const input=$("#newOption"),name=input.value.trim();if(!name)return toast("Введи название варианта");if(options.length>=16)return toast("Максимум 16 вариантов");options.push({id:Date.now(),name,weight:1,color:COLORS[options.length%COLORS.length]});input.value="";renderOptions();beep(540)}
+$("#addOption").addEventListener("click",addOption);$("#newOption").addEventListener("keydown",e=>{if(e.key==="Enter")addOption()});
+$("#resetOptions").addEventListener("click",()=>{options=defaults.map(x=>({...x}));$("#winnerText").textContent="Пока пусто";renderOptions()});
+$("#shuffleOptions").addEventListener("click",()=>{options.sort(()=>Math.random()-.5);renderOptions();beep(400)});
+function weightedPick(){const total=options.reduce((s,o)=>s+Math.max(.01,Number(o.weight)||.01),0);let n=Math.random()*total;for(let i=0;i<options.length;i++){n-=Math.max(.01,Number(options[i].weight)||.01);if(n<=0)return i}return options.length-1}
+function spin(){if(spinning||options.length<2)return;spinning=true;$("#spinButton").disabled=true;$("#winnerText").textContent="Крутим...";const index=weightedPick(),total=options.reduce((s,o)=>s+Math.max(.01,Number(o.weight)||.01),0);let before=0;for(let i=0;i<index;i++)before+=Math.max(.01,Number(options[i].weight)||.01)/total;const sweep=Math.max(.01,Number(options[index].weight)||.01)/total*Math.PI*2;const target=-Math.PI/2-(before*Math.PI*2+sweep/2);const current=((rotation%(Math.PI*2))+Math.PI*2)%(Math.PI*2);let delta=((target-current)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);delta+=Math.PI*2*(5+Math.floor(Math.random()*3));const start=rotation,end=rotation+delta,duration=reduceMotion?900:5200+Math.random()*900,t0=performance.now();let lastTick=0;function frame(now){const t=Math.min(1,(now-t0)/duration),ease=1-Math.pow(1-t,5);rotation=start+(end-start)*ease;drawWheel();if(t-lastTick>.035){beep(180+Math.random()*30,.025,"square",.008);lastTick=t}if(t<1)requestAnimationFrame(frame);else{rotation=((rotation%(Math.PI*2))+Math.PI*2)%(Math.PI*2);drawWheel();spinning=false;$("#spinButton").disabled=options.length<2;$("#winnerText").textContent=options[index].name;beep(720,.22,"sine",.06);setTimeout(()=>beep(920,.3,"sine",.045),100);toast("Выпало: "+options[index].name)}}requestAnimationFrame(frame)}
+$("#spinButton").addEventListener("click",spin);renderOptions();
+// Tic-tac-toe
+let board=Array(9).fill(""),tttMode="ai",tttTurn="X",tttOver=false,tttScore={X:0,O:0},tttWins=0;
+const wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+function winner(b=board){for(const line of wins){const [a,c,d]=line;if(b[a]&&b[a]===b[c]&&b[a]===b[d])return{mark:b[a],line}}return b.every(Boolean)?{mark:"draw",line:[]}:null}
+function renderTtt(win=null){const root=$("#tttBoard");root.innerHTML="";board.forEach((mark,i)=>{const cell=document.createElement("button");cell.className="ttt-cell"+(mark?" "+mark.toLowerCase():"")+(win?.line.includes(i)?" winning":"");cell.textContent=mark==="X"?"×":mark==="O"?"○":"";cell.disabled=!!mark||tttOver||tttMode==="ai"&&tttTurn==="O";cell.setAttribute("aria-label","Клетка "+(i+1)+(mark?", "+mark:""));cell.addEventListener("click",()=>tttMove(i));root.append(cell)});$("#xScore").textContent=tttScore.X;$("#oScore").textContent=tttScore.O;$("#xScoreCard").classList.toggle("active-score",tttTurn==="X"&&!tttOver);$("#oScoreCard").classList.toggle("active-score",tttTurn==="O"&&!tttOver);$("#oPlayerLabel").textContent=tttMode==="ai"?"КОМПЬЮТЕР":"ИГРОК O"}
+function endTtt(result){tttOver=true;if(result.mark==="draw"){$("#tttResult").textContent="Ничья! Попробуй ещё раз";$("#turnText").textContent="НИЧЬЯ";$("#turnSymbol").textContent="=";beep(280,.18)}else{tttScore[result.mark]++;if(result.mark==="X")tttWins++;$("#winsStat").textContent=tttWins;$("#tttResult").textContent=result.mark==="X"?"Ты победил! Отличная партия.":tttMode==="ai"?"Компьютер победил. Ещё раунд?":"Победил игрок O!";$("#turnText").textContent="ПОБЕДА";$("#turnSymbol").textContent=result.mark==="X"?"×":"○";beep(result.mark==="X"?760:230,.3)}renderTtt(result)}
+function minimax(b,depth,isMax){const res=winner(b);if(res)return res.mark==="O"?10-depth:res.mark==="X"?depth-10:0;let best=isMax?-Infinity:Infinity;for(let i=0;i<9;i++)if(!b[i]){b[i]=isMax?"O":"X";const score=minimax(b,depth+1,!isMax);b[i]="";best=isMax?Math.max(best,score):Math.min(best,score)}return best}
+function aiMove(){if(tttOver)return;let best=-Infinity,move=-1;for(let i=0;i<9;i++)if(!board[i]){board[i]="O";const score=minimax(board,0,false);board[i]="";if(score>best){best=score;move=i}}if(move>=0){board[move]="O";tttTurn="X";const res=winner();if(res)endTtt(res);else{renderTtt();$("#turnText").textContent="ТВОЙ ХОД";$("#turnSymbol").textContent="×";beep(360,.07)}}}
+function tttMove(i){if(tttOver||board[i]||tttMode==="ai"&&tttTurn!=="X")return;board[i]=tttTurn;beep(tttTurn==="X"?500:430,.07);const res=winner();if(res)return endTtt(res);tttTurn=tttTurn==="X"?"O":"X";renderTtt();$("#turnText").textContent=tttMode==="ai"?"ХОД КОМПЬЮТЕРА":"ХОД ИГРОКА";$("#turnSymbol").textContent=tttTurn==="X"?"×":"○";if(tttMode==="ai"&&tttTurn==="O")setTimeout(aiMove,350)}
+function resetTtt(resetScore=false){board=Array(9).fill("");tttTurn="X";tttOver=false;if(resetScore)tttScore={X:0,O:0};$("#turnText").textContent="ТВОЙ ХОД";$("#turnSymbol").textContent="×";$("#tttResult").textContent="Твой ход — поставь крестик";renderTtt()}
+$("#newTtt").addEventListener("click",()=>{resetTtt();beep(430)});$$("[data-ttt-mode]").forEach(b=>b.addEventListener("click",()=>{tttMode=b.dataset.tttMode;$$("[data-ttt-mode]").forEach(x=>x.classList.toggle("active",x===b));resetTtt(true)}));renderTtt();
+// Snake
+const snakeCanvas=$("#snakeCanvas"),sctx=snakeCanvas.getContext("2d"),GRID=25,CELL=24;let snake=[],food={x:15,y:12},dir={x:1,y:0},nextDir={x:1,y:0},snakeScore=0,snakeBest=Number(localStorage.getItem("multitool-snake-best")||0),snakeTimer=0,snakeRunning=false,snakePaused=false,lastStep=0;
+$("#snakeBest").textContent=String(snakeBest).padStart(3,"0");
+function resetSnake(){snake=[{x:10,y:12},{x:9,y:12},{x:8,y:12}];dir={x:1,y:0};nextDir={x:1,y:0};snakeScore=0;$("#snakeScore").textContent="000";spawnFood();drawSnake()}
+function spawnFood(){do{food={x:Math.floor(Math.random()*GRID),y:Math.floor(Math.random()*GRID)}}while(snake.some(p=>p.x===food.x&&p.y===food.y))}
+function drawSnake(){const ctx=sctx;ctx.clearRect(0,0,600,600);ctx.fillStyle="#0b111a";ctx.fillRect(0,0,600,600);ctx.strokeStyle="rgba(130,160,180,.07)";ctx.lineWidth=1;for(let i=0;i<=GRID;i++){ctx.beginPath();ctx.moveTo(i*CELL,0);ctx.lineTo(i*CELL,600);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*CELL);ctx.lineTo(600,i*CELL);ctx.stroke()}const fx=(food.x+.5)*CELL,fy=(food.y+.5)*CELL;ctx.shadowColor="#f18eaa";ctx.shadowBlur=22;ctx.fillStyle="#f18eaa";ctx.beginPath();ctx.arc(fx,fy,8,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;snake.forEach((p,i)=>{const x=p.x*CELL+2,y=p.y*CELL+2;ctx.fillStyle=i===0?"#c8ff9a":"#79cda7";ctx.shadowColor=i===0?"#a8f078":"transparent";ctx.shadowBlur=i===0?13:0;ctx.beginPath();ctx.roundRect(x,y,CELL-4,CELL-4, i===0?7:5);ctx.fill()});ctx.shadowBlur=0;if(snake.length){const h=snake[0];ctx.fillStyle="#15221b";const ex=(h.x+.5)*CELL+(dir.x===1?4:dir.x===-1?-4:0),ey=(h.y+.5)*CELL+(dir.y===1?4:dir.y===-1?-4:0);ctx.beginPath();ctx.arc(ex-3,ey-3,2,0,Math.PI*2);ctx.arc(ex+3,ey-3,2,0,Math.PI*2);ctx.fill()}}
+function snakeStart(){if(snakeRunning&&!snakePaused)return; if(!snake.length)resetSnake();snakeRunning=true;snakePaused=false;$("#snakeOverlay").classList.add("hidden");$("#snakeState").textContent="В ИГРЕ";$("#snakeStart").textContent="Продолжить";lastStep=performance.now();if(snakeTimer)clearInterval(snakeTimer);snakeTimer=setInterval(snakeStep,125);beep(520)}
+function snakeStep(){if(!snakeRunning||snakePaused)return;dir=nextDir;const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};if(head.x<0||head.x>=GRID||head.y<0||head.y>=GRID||snake.some((p,i)=>i<snake.length-1&&p.x===head.x&&p.y===head.y)){snakeGameOver();return}snake.unshift(head);if(head.x===food.x&&head.y===food.y){snakeScore+=10;$("#snakeScore").textContent=String(snakeScore).padStart(3,"0");beep(660,.08,"triangle");if(snakeScore>snakeBest){snakeBest=snakeScore;localStorage.setItem("multitool-snake-best",snakeBest);$("#snakeBest").textContent=String(snakeBest).padStart(3,"0")}spawnFood()}else snake.pop();drawSnake()}
+function snakeGameOver(){snakeRunning=false;clearInterval(snakeTimer);$("#snakeState").textContent="ИГРА ОКОНЧЕНА";$("#snakeOverlayTitle").textContent="Игра окончена";$("#snakeOverlayText").textContent="Твой результат: "+snakeScore+" очков";$("#snakeStart").textContent="Играть снова";$("#snakeOverlay").classList.remove("hidden");beep(150,.35,"sawtooth")}
+function snakePause(){if(!snakeRunning)return;snakePaused=!snakePaused;$("#snakeState").textContent=snakePaused?"ПАУЗА":"В ИГРЕ";$("#snakePause").textContent=snakePaused?"▶ Продолжить":"Ⅱ Пауза";if(snakePaused){$("#snakeOverlayTitle").textContent="Пауза";$("#snakeOverlayText").textContent="Нажми продолжить, чтобы вернуться";$("#snakeStart").textContent="Продолжить";$("#snakeOverlay").classList.remove("hidden")}else $("#snakeOverlay").classList.add("hidden")}
+function changeDirection(name){const dirs={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};const d=dirs[name];if(!d||d.x===-dir.x&&d.y===-dir.y)return;nextDir=d;if(!snakeRunning)snakeStart()}
+$("#snakeStart").addEventListener("click",()=>{if(snakePaused)snakePause();else{if(!snake.length||!snakeRunning&&snakeScore>0)resetSnake();snakeStart()}});
+$("#snakePause").addEventListener("click",snakePause);$("#snakeRestart").addEventListener("click",()=>{clearInterval(snakeTimer);snakeRunning=false;snakePaused=false;resetSnake();$("#snakeOverlayTitle").textContent="Готов?";$("#snakeOverlayText").textContent="Нажми старт, чтобы начать игру";$("#snakeStart").textContent="Начать игру";$("#snakeOverlay").classList.remove("hidden");$("#snakeState").textContent="ГОТОВ К ИГРЕ"});
+$$("[data-dir]").forEach(b=>{b.addEventListener("pointerdown",e=>{e.preventDefault();changeDirection(b.dataset.dir)})});
+document.addEventListener("keydown",e=>{const key=e.key.toLowerCase(),dirs={arrowup:"up",w:"up",arrowdown:"down",s:"down",arrowleft:"left",a:"left",arrowright:"right",d:"right"};if(dirs[key]&&$("#page-snake").classList.contains("active")){e.preventDefault();changeDirection(dirs[key])}if(key===" "&&$("#page-snake").classList.contains("active")){e.preventDefault();snakePause()}});
+resetSnake();
+// Weather and geocoding
+const weatherCodes={0:["Ясно","☀","sun"],1:["Преимущественно ясно","🌤","sun"],2:["Переменная облачность","⛅","cloud"],3:["Пасмурно","☁","cloud"],45:["Туман","〰","fog"],48:["Изморозь и туман","〰","fog"],51:["Лёгкая морось","🌦","rain"],53:["Морось","🌦","rain"],55:["Сильная морось","🌧","rain"],56:["Ледяная морось","🌧","snow"],57:["Сильная ледяная морось","🌧","snow"],61:["Небольшой дождь","🌦","rain"],63:["Дождь","🌧","rain"],65:["Сильный дождь","🌧","rain"],66:["Ледяной дождь","🌧","snow"],67:["Сильный ледяной дождь","🌧","snow"],71:["Небольшой снег","🌨","snow"],73:["Снег","❄","snow"],75:["Сильный снег","❄","snow"],77:["Снежная крупа","❄","snow"],80:["Ливень","🌧","rain"],81:["Сильный ливень","🌧","rain"],82:["Очень сильный ливень","⛈","rain"],85:["Снегопад","🌨","snow"],86:["Сильный снегопад","❄","snow"],95:["Гроза","⛈","storm"],96:["Гроза с градом","⛈","storm"],99:["Сильная гроза","⛈","storm"]};
+function setWeatherVisual(type){weatherType=type;if(!particlesOn){clearAtmosphere();return}drawAtmosphere()}
+function weatherText(code){return weatherCodes[code]||["Переменная погода","☁","cloud"]}
+async function geocode(query){const u="https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(query)+"&count=8&language=ru&format=json";const r=await fetch(u);if(!r.ok)throw Error("Geocoding error");const j=await r.json();return(j.results||[]).map(x=>({name:x.name,admin:x.admin1,country:x.country,lat:x.latitude,lon:x.longitude,display:[x.name,x.admin1,x.country].filter(Boolean).join(", ")}))}
+async function reverseGeocode(lat,lon){try{const r=await fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+lat+"&lon="+lon+"&zoom=10&accept-language=ru");if(!r.ok)throw 0;const j=await r.json(),a=j.address||{};return a.city||a.town||a.village||a.municipality||a.county||"Выбранная точка"}catch{return "Точка на карте"}}
+function showSuggestions(items){const box=$("#suggestions");box.innerHTML="";if(!items.length){box.hidden=true;return}items.forEach(loc=>{const b=document.createElement("button");b.className="suggestion-item";b.textContent=loc.display;b.addEventListener("click",()=>{box.hidden=true;$("#locationInput").value=loc.display;loadWeather(loc)});box.append(b)});box.hidden=false}
+$("#locationInput").addEventListener("input",()=>{const q=$("#locationInput").value.trim();clearTimeout(window.geoTimer);if(q.length<2){$("#suggestions").hidden=true;return}window.geoTimer=setTimeout(async()=>{try{showSuggestions(await geocode(q))}catch{$("#suggestions").hidden=true}},350)});
+$("#locationInput").addEventListener("keydown",e=>{if(e.key==="Enter")searchCity();if(e.key==="Escape")$("#suggestions").hidden=true});
+async function searchCity(){const q=$("#locationInput").value.trim();if(!q)return toast("Введи название города");$("#suggestions").hidden=true;$("#searchLocation").textContent="...";try{const results=await geocode(q);if(!results.length)throw Error("Место не найдено");if(results.length>1)showSuggestions(results);else loadWeather(results[0])}catch(e){toast("Не удалось найти место")}finally{$("#searchLocation").innerHTML='Найти <b>↗</b>'}}
+$("#searchLocation").addEventListener("click",searchCity);
+async function loadWeather(loc){const req=++weatherRequest;currentLocation=loc;$("#weatherCity").textContent=loc.display||loc.name;$("#weatherUpdated").textContent="Загружаем данные...";$("#sourceStatus").textContent="Запрашиваем источники";$("#weatherDescription").textContent="Загрузка";$("#temperature").textContent="—°";try{const params="latitude="+loc.lat+"&longitude="+loc.lon+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,precipitation_probability,weather_code&daily=sunrise,sunset&timezone=auto&forecast_days=2";const results=await Promise.allSettled([fetch("https://api.open-meteo.com/v1/forecast?"+params).then(r=>{if(!r.ok)throw Error("Open-Meteo "+r.status);return r.json()}),fetch("https://wttr.in/"+encodeURIComponent(loc.name||loc.display)+"?format=j1").then(r=>{if(!r.ok)throw Error("wttr "+r.status);return r.json()})]);if(req!==weatherRequest)return;const primary=results[0].status==="fulfilled"?results[0].value:null,secondary=results[1].status==="fulfilled"?results[1].value:null;if(!primary&&!secondary)throw Error("Weather providers unavailable");renderWeather(loc,primary,secondary);$("#sourceStatus").textContent=[primary?"Open-Meteo":"",secondary?"wttr.in":""].filter(Boolean).join(" + ")+" · "+(primary&&secondary?"2 источника":"1 источник");$("#weatherUpdated").textContent="Обновлено: "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}catch(e){if(req===weatherRequest){$("#weatherUpdated").textContent="Не удалось загрузить погоду";$("#sourceStatus").textContent="Источники временно недоступны";toast("Проверь подключение и попробуй ещё раз")}}}
+function renderWeather(loc,om,wt){const c=om?.current||{},w=wt?.current_condition?.[0]||{},temp=c.temperature_2m??Number(w.temp_C),feels=c.apparent_temperature??Number(w.FeelsLikeC),code=c.weather_code??null,wtDesc=w.weatherDesc?.[0]?.value,condition=code!==null?weatherText(code):[wtDesc||"Переменная погода","☁","cloud"];$("#weatherCity").textContent=loc.display||loc.name||"Выбранная точка";$("#temperature").textContent=Math.round(temp)+"°";$("#feelsLike").textContent=Math.round(feels)+"°";$("#weatherDescription").textContent=condition[0];$("#weatherIcon").textContent=condition[1];$("#humidity").textContent=(c.relative_humidity_2m??w.humidity??"—")+"%";const wind=c.wind_speed_10m??Number(w.windspeedKmph);$("#wind").textContent=wind==="—"?"—":Math.round(wind)+" км/ч";$("#pressure").textContent=Math.round(c.surface_pressure??Number(w.pressure))+" гПа";$("#visibility").textContent=w.visibility?Number(w.visibility)/10+" км":c.precipitation!==undefined?(c.precipitation>0?"Осадки":"Хорошая"):"—";setWeatherVisual(condition[2]);const hourly=$("#hourlyForecast");hourly.innerHTML="";if(om?.hourly){const now=new Date();let start=om.hourly.time.findIndex(t=>new Date(t)>=now);if(start<0)start=0;[0,3,6,9,12].forEach(offset=>{const i=Math.min(start+offset,om.hourly.time.length-1),d=new Date(om.hourly.time[i]),codeH=om.hourly.weather_code[i],info=weatherText(codeH),el=document.createElement("div");el.className="hour-item";el.innerHTML="<span>"+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})+"</span><b>"+info[1]+"</b><small>"+Math.round(om.hourly.temperature_2m[i])+"°</small>";hourly.append(el)})}else hourly.innerHTML='<div class="forecast-placeholder">Почасовой прогноз недоступен для второго источника</div>';const day=om?.daily;$("#sunrise").textContent=day?.sunrise?.[0]?new Date(day.sunrise[0]).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):wt?.weather?.[0]?.astronomy?.[0]?.sunrise||"—:—";$("#sunset").textContent=day?.sunset?.[0]?new Date(day.sunset[0]).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):wt?.weather?.[0]?.astronomy?.[0]?.sunset||"—:—"}
+$("#mapToggle").addEventListener("click",()=>{const panel=$("#mapPanel");panel.hidden=!panel.hidden;if(!panel.hidden){initMap();setTimeout(()=>map?.invalidateSize(),120)}});
+$("#closeMap").addEventListener("click",()=>$("#mapPanel").hidden=true);
+function initMap(){if(map||!window.L)return;map=L.map("weatherMap",{zoomControl:true}).setView([50.119,26.85],6);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);map.on("click",async e=>{pendingPoint={lat:e.latlng.lat,lon:e.latlng.lng};if(mapMarker)map.removeLayer(mapMarker);mapMarker=L.marker(e.latlng).addTo(map);$("#mapCoordinates").textContent=pendingPoint.lat.toFixed(4)+", "+pendingPoint.lon.toFixed(4)+" · определяем место...";$("#useMapPoint").disabled=true;const name=await reverseGeocode(pendingPoint.lat,pendingPoint.lon);pendingPoint.name=name;$("#mapCoordinates").textContent=name+" · "+pendingPoint.lat.toFixed(3)+", "+pendingPoint.lon.toFixed(3);$("#useMapPoint").disabled=false})}
+$("#useMapPoint").addEventListener("click",()=>{if(!pendingPoint)return;const loc={name:pendingPoint.name,display:pendingPoint.name,lat:pendingPoint.lat,lon:pendingPoint.lon};$("#locationInput").value=loc.name;$("#mapPanel").hidden=true;loadWeather(loc)});
+$("#locateButton").addEventListener("click",()=>{if(!navigator.geolocation)return toast("Геолокация не поддерживается браузером");$("#locateButton").textContent="…";navigator.geolocation.getCurrentPosition(async pos=>{const {latitude:lat,longitude:lon}=pos.coords,name=await reverseGeocode(lat,lon);$("#locationInput").value=name;$("#locateButton").textContent="◎";loadWeather({name,display:name,lat,lon})},()=>{toast("Разреши доступ к местоположению в браузере");$("#locateButton").textContent="◎"},{enableHighAccuracy:false,timeout:10000})});
+// Weather particles: rain, snow, wind, sun and storm.
+const atmosphere=$("#atmosphere"),actx=atmosphere.getContext("2d");let aw=innerWidth,ah=innerHeight,weatherParticles=[],raf=0,windTime=0;
+function resizeAtmosphere(){const d=Math.min(devicePixelRatio||1,1.5);aw=innerWidth;ah=innerHeight;atmosphere.width=Math.floor(aw*d);atmosphere.height=Math.floor(ah*d);actx.setTransform(d,0,0,d,0,0);weatherParticles=[];const count=weatherType==="rain"?Math.min(180,Math.round(aw*.16)):weatherType==="snow"?Math.min(110,Math.round(aw*.1)):weatherType==="storm"?130:weatherType==="sun"?55:weatherType==="wind"?85:45;for(let i=0;i<count;i++)weatherParticles.push(makeParticle())}
+function makeParticle(){return{x:Math.random()*aw,y:Math.random()*ah,z:Math.random(),r:Math.random()*2+1,v:Math.random()*.8+.4,phase:Math.random()*Math.PI*2}}
+function clearAtmosphere(){if(raf)cancelAnimationFrame(raf);raf=0;actx.clearRect(0,0,aw,ah)}
+function drawAtmosphere(){if(!particlesOn){clearAtmosphere();return}if(!weatherParticles.length)resizeAtmosphere();if(raf)return;const draw=()=>{actx.clearRect(0,0,aw,ah);windTime+=.008;const type=weatherType;weatherParticles.forEach(p=>{p.phase+=.012;let alpha=.12+p.z*.38;if(type==="rain"||type==="storm"){p.y+=p.v*8;p.x+=1.1+p.z*1.2;actx.strokeStyle=type==="storm"?"rgba(158,190,255,"+alpha+")":"rgba(139,195,255,"+alpha+")";actx.lineWidth=.7+p.z;actx.beginPath();actx.moveTo(p.x,p.y);actx.lineTo(p.x-3,p.y+10+p.z*10);actx.stroke();if(p.y>ah+20){p.y=-20;p.x=Math.random()*aw}}else if(type==="snow"){p.y+=p.v*(.5+p.z);p.x+=Math.sin(p.phase)*.65;actx.fillStyle="rgba(226,239,255,"+alpha+")";actx.beginPath();actx.arc(p.x,p.y,p.r*(.5+p.z),0,Math.PI*2);actx.fill();if(p.y>ah+10){p.y=-10;p.x=Math.random()*aw}}else if(type==="sun"){p.x+=Math.cos(p.phase)*.25;p.y+=Math.sin(p.phase)*.22;actx.fillStyle="rgba(255,216,125,"+alpha+")";actx.beginPath();actx.arc(p.x,p.y,p.r*(.5+p.z),0,Math.PI*2);actx.fill()}else if(type==="wind"){p.x+=2.5+p.v*2;p.y+=Math.sin(p.phase)*.4;actx.strokeStyle="rgba(166,219,210,"+alpha+")";actx.lineWidth=1+p.z;actx.beginPath();actx.moveTo(p.x,p.y);actx.lineTo(p.x-20-p.z*35,p.y+Math.sin(p.phase)*5);actx.stroke();if(p.x>aw+60){p.x=-50;p.y=Math.random()*ah}}else{p.x+=Math.sin(p.phase)*.18;p.y-=.15;actx.fillStyle="rgba(160,190,210,"+alpha*.55+")";actx.beginPath();actx.arc(p.x,p.y,p.r*.6,0,Math.PI*2);actx.fill();if(p.y<-10)p.y=ah+10}});if(type==="sun"){const g=actx.createRadialGradient(aw*.85,ah*.1,5,aw*.85,ah*.1,Math.min(aw,ah)*.48);g.addColorStop(0,"rgba(255,202,103,.08)");g.addColorStop(1,"rgba(255,202,103,0)");actx.fillStyle=g;actx.fillRect(0,0,aw,ah)}raf=requestAnimationFrame(draw)};raf=requestAnimationFrame(draw)}
+window.addEventListener("resize",()=>{if(particlesOn){resizeAtmosphere();if(raf){cancelAnimationFrame(raf);raf=0}drawAtmosphere()}});
+if(matchMedia){matchMedia("(prefers-color-scheme:light)").addEventListener?.("change",()=>{if(theme==="system")applyPrefs()})}
+applyPrefs();drawAtmosphere();
 })();
