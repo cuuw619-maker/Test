@@ -152,7 +152,7 @@ window.MultiGameAPI.ttt={
   },done:()=>tttOver
 };
 window.MultiGameAPI.snake={
-  start(){if(aiTraining)return false;if(snakeRunning)clearInterval(snakeTimer);snakeRunning=false;snakePaused=false;snakeAiMode=true;lastAIState=null;lastAIAction=null;resetSnake();snakeStart();return true},
+  start(interval=76){if(aiTraining)return false;if(snakeRunning)clearInterval(snakeTimer);snakeRunning=false;snakePaused=false;snakeAiMode=true;lastAIState=null;lastAIAction=null;resetSnake();snakeStart();clearInterval(snakeTimer);snakeTimer=setInterval(snakeStep,Math.max(35,Math.min(220,Number(interval)||76)));return true},
   stop(){if(snakeRunning){snakeRunning=false;clearInterval(snakeTimer)}snakeAiMode=false;$("#snakeState").textContent="ИИ ОСТАНОВЛЕН";return true},
   done:()=>!snakeRunning&&snakeScore>0
 };
