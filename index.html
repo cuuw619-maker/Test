@@ -2,144 +2,97 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0d1018">
-<meta name="description" content="WALLORA — обои, аватарки и случайные открытия из Википедии.">
-<title>WALLORA — твой экран, твой стиль</title>
-<link rel="preconnect" href="https://wallhaven.cc">
-<link rel="preconnect" href="https://api.waifu.im">
-<link rel="preconnect" href="https://commons.wikimedia.org">
-<link rel="preconnect" href="https://upload.wikimedia.org">
-<link rel="preconnect" href="https://ru.wikipedia.org">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0e16">
+<meta name="description" content="MULTITOOL — игры, рулетка и интерактивная погода в одном месте.">
+<title>MULTITOOL — твои инструменты</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="./styles.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="./app.js" defer></script>
 </head>
 <body data-theme="dark">
-<canvas id="ambientCanvas" aria-hidden="true"></canvas>
-<div class="site-shell">
-<header class="site-header">
-  <a class="brand" href="./" aria-label="WALLORA — главная">
-    <span class="brand-symbol"><i></i><i></i><i></i></span>
-    <span>WALLORA<span class="brand-dot">.</span></span>
-  </a>
-  <nav class="main-nav" aria-label="Разделы сайта">
-    <button class="nav-tab is-active" data-mode="wallpapers" type="button"><span class="nav-icon">▧</span> Обои</button>
-    <button class="nav-tab" data-mode="avatars" type="button"><span class="nav-icon">◉</span> Аватарки</button>
-    <button class="nav-tab" data-mode="facts" type="button"><span class="nav-icon">✳</span> Факты</button>
-  </nav>
-  <div class="header-actions">
-    <button class="header-action favorites-action" id="favoritesNav" type="button" aria-label="Избранное" title="Избранное"><span>♡</span><b id="favoriteCount">0</b></button>
-    <button class="header-action settings-action" id="openSettings" type="button" aria-label="Настройки" title="Настройки"><span>⚙</span></button>
+<canvas id="atmosphere" aria-hidden="true"></canvas>
+<div class="noise" aria-hidden="true"></div>
+<div class="app-shell">
+<header class="topbar">
+  <a class="brand" href="#" aria-label="MULTITOOL"><span class="brand-mark"><i></i><i></i><i></i><i></i></span><span>MULTI<span>TOOL</span><b>.</b></span></a>
+  <div class="topbar-center"><span class="live-dot"></span><span id="headerStatus">ВСЁ ДЛЯ ТВОЕГО МОМЕНТА</span></div>
+  <div class="top-actions">
+    <button class="icon-button" id="soundToggle" aria-label="Звук включён" title="Звук"><span id="soundIcon">♫</span></button>
+    <button class="icon-button" id="themeToggle" aria-label="Переключить тему" title="Тема">◐</button>
+    <button class="icon-button" id="settingsButton" aria-label="Настройки" title="Настройки">⚙</button>
   </div>
 </header>
-
-<main>
-<section class="hero" id="hero">
-  <div class="hero-copy">
-    <div class="eyebrow"><span class="eyebrow-line"></span><span id="heroEyebrow">YOUR SCREEN. YOUR VIBE.</span></div>
-    <h1 id="heroTitle">Твой экран.<br><em>Твои правила.</em></h1>
-    <p class="hero-description" id="heroDescription">Обои, аватарки и маленькие открытия. Собери свой цифровой стиль из того, что действительно нравится.</p>
-    <form class="search-form" id="searchForm" role="search">
-      <span class="search-symbol" aria-hidden="true">⌕</span>
-      <input id="searchInput" type="search" placeholder="Аниме, digital art, pixel art, cyberpunk..." autocomplete="off" aria-label="Поиск обоев и иллюстраций">
-      <button type="submit">Найти <span>↗</span></button>
-    </form>
-    <div class="hero-meta" id="heroMeta"><span><i>✳</i> Без регистрации</span><span><i>↗</i> Открытые источники</span><span><i>♡</i> Своё избранное</span></div>
-  </div>
-  <div class="hero-visual" id="heroVisual" aria-hidden="true">
-    <div class="visual-glow"></div>
-    <div class="visual-card visual-card-back"></div>
-    <div class="visual-card visual-card-mid"></div>
-    <div class="visual-card visual-card-front"><span>MAKE IT YOURS</span><b>W.</b></div>
-    <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
-    <span class="visual-caption">COLLECTION / 2026</span>
-  </div>
-  <span class="hero-coordinate" aria-hidden="true">WL—001 / DIGITAL SPACE</span>
-</section>
-
-<section class="collection-section" id="collection">
-  <div class="section-heading">
-    <div><div class="eyebrow"><span class="eyebrow-line"></span><span id="sectionEyebrow">FIND YOUR STYLE</span></div>
-      <h2 id="sectionTitle">Подбери настроение<span class="title-period">.</span></h2>
-      <p class="section-subtitle" id="sectionSubtitle">Выбери направление — мы соберём подходящую подборку.</p>
-    </div>
-    <div class="result-indicator" id="resultIndicator"><span class="result-dot"></span><span id="resultStatus">Открытая медиатека</span></div>
-  </div>
-
-  <div class="category-area" id="categoryArea">
-    <div class="category-label">НАПРАВЛЕНИЯ</div>
-    <div class="category-row" id="categoryRow" aria-label="Категории">
-      <button class="category-chip is-active" type="button" data-category="all">Все</button>
-      <button class="category-chip" type="button" data-category="anime">Аниме</button>
-      <button class="category-chip" type="button" data-category="manga">Манга</button>
-      <button class="category-chip" type="button" data-category="illustration">Иллюстрации</button>
-      <button class="category-chip" type="button" data-category="minimal">Минимализм</button>
-      <button class="category-chip" type="button" data-category="gaming">Игры</button>
-      <button class="category-chip" type="button" data-category="pixel">Пиксель-арт</button>
-      <button class="category-chip" type="button" data-category="cyberpunk">Киберпанк</button>
-      <button class="category-chip" type="button" data-category="lofi">Lo-fi</button>
-      <button class="category-chip" type="button" data-category="synthwave">Synthwave</button>
-      <button class="category-chip" type="button" data-category="dark">Тёмные</button>
-      <button class="category-chip" type="button" data-category="retro">Ретро</button>
-      <button class="category-chip" type="button" data-category="cars">Авто</button>
-      <button class="category-chip" type="button" data-category="space">Космос</button>
-      <button class="category-chip" type="button" data-category="nature">Природа</button>
-      <button class="category-chip" type="button" data-category="abstract">Абстракция</button>
-      <button class="category-chip" type="button" data-category="horror">Мрачные</button>
-    </div>
-  </div>
-
-  <div class="toolbar">
-    <div class="toolbar-left">
-      <span class="toolbar-label">ФИЛЬТРЫ</span>
-      <select id="orientationFilter" aria-label="Формат"><option value="all">Любой формат</option><option value="landscape">Для ПК</option><option value="portrait">Для телефона</option><option value="square">Квадратные</option></select>
-      <span class="toolbar-divider"></span>
-      <select id="sortSelect" aria-label="Сортировка"><option value="relevance">По релевантности</option><option value="resolution">Высокое разрешение</option><option value="title">По названию</option><option value="random">Перемешать</option></select>
-    </div>
-    <div class="toolbar-right"><span id="visibleCount">0 изображений</span><span class="view-indicator">▦</span></div>
-  </div>
-
-  <div class="wallpaper-grid" id="wallpaperGrid" aria-live="polite"><div class="loading-state"><span class="loader"></span><p>Подбираем изображения...</p></div></div>
-  <div class="empty-state" id="emptyState" hidden><span class="empty-symbol">⌕</span><h3 id="emptyTitle">Ничего не найдено</h3><p id="emptyDescription">Попробуй другой запрос или категорию.</p><button class="text-button" id="resetButton" type="button">Сбросить фильтры <span>↗</span></button></div>
-  <div class="load-more-wrap" id="loadMoreWrap"><button class="load-more-button" id="loadMoreButton" type="button">Показать ещё <span>↓</span></button><p>Новые изображения подгружаются по мере просмотра</p></div>
-</section>
-
-<section class="facts-section" id="factsSection" hidden>
-  <div class="facts-intro"><div class="eyebrow"><span class="eyebrow-line"></span> WIKIPEDIA RANDOM DISCOVERY</div><h2>Одно нажатие.<br><em>Новое открытие.</em></h2><p>Случайная статья из русской Википедии. Иногда это история, иногда наука, искусство или что-то совершенно неожиданное.</p></div>
-  <article class="fact-card" id="factCard" aria-live="polite">
-    <div class="fact-loading" id="factLoading"><span class="loader"></span><span>Ищем случайную статью...</span></div>
-    <div class="fact-content" id="factContent" hidden>
-      <div class="fact-image-wrap" id="factImageWrap" hidden><img id="factImage" alt=""></div>
-      <div class="fact-copy"><div class="fact-kicker"><span class="result-dot"></span> СЛУЧАЙНАЯ СТАТЬЯ</div><h3 id="factTitle">Загрузка...</h3><p id="factExtract"></p><div class="fact-footer"><span id="factCategory">Википедия · Русский язык</span><a id="factSource" href="https://ru.wikipedia.org/" target="_blank" rel="noopener noreferrer">Читать статью ↗</a></div></div>
-    </div>
-    <div class="fact-error" id="factError" hidden>Не удалось получить статью. Проверь подключение и попробуй ещё раз.</div>
-  </article>
-  <button class="random-fact-button" id="randomFactButton" type="button"><span class="random-icon">⟳</span> Другая случайная статья <span>↗</span></button>
-  <p class="fact-disclaimer">Материалы предоставляются Википедией. Текст может быть сокращён для карточки.</p>
-</section>
-
-<section class="source-note" id="sourceNote"><div class="source-icon">ⓘ</div><div><strong>Каталоги именно обоев и авторские права</strong><p>Основной поиск идёт по Wallhaven — специализированному каталогу обоев с фильтром SFW. Для аниме-подборок дополнительно используется Waifu.im с отключённым NSFW. Wikimedia Commons и Openverse подключаются как резерв. Безопасный контент не обязательно означает свободную лицензию: проверяй автора и условия на странице оригинала.</p></div><a href="https://wallhaven.cc/" target="_blank" rel="noopener noreferrer">Wallhaven ↗</a></section>
-</main>
-
-<footer class="site-footer"><a class="brand footer-brand" href="./"><span class="brand-symbol"><i></i><i></i><i></i></span><span>WALLORA<span class="brand-dot">.</span></span></a><span>Собери экран под себя.</span><span>© <span id="currentYear"></span> WALLORA</span></footer>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-label">РАЗДЕЛЫ</div>
+    <button class="nav-item active" data-page="home"><span class="nav-glyph">⌂</span><span>Главная</span><kbd>01</kbd></button>
+    <div class="side-label side-label-spaced">ИНСТРУМЕНТЫ</div>
+    <button class="nav-item" data-page="roulette"><span class="nav-glyph">◉</span><span>Рулетка</span><kbd>02</kbd></button>
+    <button class="nav-item" data-page="tictactoe"><span class="nav-glyph">▦</span><span>Крестики-нолики</span><kbd>03</kbd></button>
+    <button class="nav-item" data-page="snake"><span class="nav-glyph">⌁</span><span>Змейка</span><kbd>04</kbd></button>
+    <button class="nav-item" data-page="weather"><span class="nav-glyph">☼</span><span>Погода</span><kbd>05</kbd></button>
+    <div class="sidebar-bottom"><div class="side-mini-orbit"><span></span><i></i></div><p>Один сайт.<br><b>Много возможностей.</b></p><small>BUILT FOR EVERY SCREEN</small></div>
+  </aside>
+  <main class="main-content">
+    <section class="page active" id="page-home">
+      <div class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> YOUR PERSONAL TOOLKIT</div>
+          <h1>Меньше скуки.<br><em>Больше движения.</em></h1>
+          <p>Играй, выбирай случайности и следи за погодой. Всё необходимое — в одном интерактивном пространстве.</p>
+          <div class="hero-actions"><button class="primary-button" data-open="roulette">Начать <span>↗</span></button><span class="hero-note"><i></i> Работает на телефоне и ПК</span></div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="art-glow"></div><div class="art-ring ring-a"></div><div class="art-ring ring-b"></div>
+          <div class="art-cube"><span></span><span></span><span></span><span></span><b>M</b></div>
+          <div class="art-orb orb-a"></div><div class="art-orb orb-b"></div><div class="art-orb orb-c"></div>
+          <div class="art-caption">INTERACTIVE / 2026</div>
+        </div>
+      </div>
+      <div class="section-head"><div><div class="eyebrow">CHOOSE YOUR MODE</div><h2>Что будем делать<span class="accent">?</span></h2></div><span class="section-count">04 MODULES</span></div>
+      <div class="tool-grid">
+        <button class="tool-card roulette-card" data-open="roulette"><span class="tool-index">01 / RANDOM</span><span class="tool-icon roulette-icon">◉</span><strong>Рулетка</strong><p>Добавляй варианты, настраивай цвета и шансы. Колесо выберет за тебя.</p><span class="tool-link">Открыть инструмент <b>↗</b></span><span class="card-decoration wheel-decoration"></span></button>
+        <button class="tool-card tic-card" data-open="tictactoe"><span class="tool-index">02 / STRATEGY</span><span class="tool-icon">▦</span><strong>Крестики-нолики</strong><p>Сыграй против компьютера или устрой матч на двоих.</p><span class="tool-link">Открыть игру <b>↗</b></span><span class="card-decoration tic-decoration">× ○ ×</span></button>
+        <button class="tool-card snake-card" data-open="snake"><span class="tool-index">03 / ARCADE</span><span class="tool-icon">⌁</span><strong>Змейка</strong><p>Собирай энергию, увеличивай длину и побей свой рекорд.</p><span class="tool-link">Играть <b>↗</b></span><span class="card-decoration snake-decoration"></span></button>
+        <button class="tool-card weather-card" data-open="weather"><span class="tool-index">04 / LIVE DATA</span><span class="tool-icon">☼</span><strong>Погода</strong><p>Выбери город или точку на карте. Погода оживит весь интерфейс.</p><span class="tool-link">Узнать погоду <b>↗</b></span><span class="card-decoration weather-decoration">☁</span></button>
+      </div>
+      <div class="home-bottom"><div class="mini-stat"><span class="stat-icon">✦</span><div><b>4</b><small>ИНСТРУМЕНТА</small></div></div><div class="mini-stat"><span class="stat-icon">⌘</span><div><b>0</b><small>РЕГИСТРАЦИЙ</small></div></div><div class="mini-stat"><span class="stat-icon">◌</span><div><b>∞</b><small>ВОЗМОЖНОСТЕЙ</small></div></div><span class="bottom-caption">MADE TO BE PLAYED</span></div>
+    </section>
+    <section class="page" id="page-roulette">
+      <div class="page-heading"><div><div class="eyebrow">LET THE WHEEL DECIDE</div><h1>Рулетка<span class="accent">.</span></h1><p>Добавь варианты, выставь веса и доверься случайности.</p></div><span class="page-chip">01 / 04</span></div>
+      <div class="roulette-layout">
+        <div class="panel wheel-panel"><div class="panel-top"><span>КОЛЕСО ВЫБОРА</span><span class="live-tag"><i></i> READY</span></div><div class="wheel-stage"><div class="wheel-pointer"></div><div class="wheel-shadow"></div><div class="wheel-wrap"><canvas id="wheelCanvas" width="600" height="600"></canvas><div class="wheel-center"><span>SPIN</span><b>↻</b></div></div></div><button class="spin-button" id="spinButton"><span>Крутить рулетку</span><b>↗</b></button><div class="spin-hint">Результат определяется с учётом веса каждого варианта</div><div class="winner-box" id="winnerBox"><span class="winner-label">ПОСЛЕДНИЙ РЕЗУЛЬТАТ</span><strong id="winnerText">Пока пусто</strong></div></div>
+        <div class="panel options-panel"><div class="panel-top"><span>ТВОИ ВАРИАНТЫ</span><span class="items-count" id="itemCount">4 ВАРИАНТА</span></div><div class="option-list" id="optionList"></div><div class="add-option"><input id="newOption" maxlength="42" placeholder="Например, Пицца..." aria-label="Новый вариант"><button id="addOption" aria-label="Добавить вариант">+</button></div><div class="option-tools"><button class="subtle-button" id="shuffleOptions">⤨ Перемешать</button><button class="subtle-button" id="resetOptions">↺ Сбросить</button></div><div class="weight-info"><span>ⓘ</span><p>Вес — относительный шанс выпадения. Например, вес 2 вдвое вероятнее веса 1.</p></div></div>
+      </div>
+    </section>
+    <section class="page" id="page-tictactoe">
+      <div class="page-heading"><div><div class="eyebrow">THINK BEFORE YOU MOVE</div><h1>Крестики-нолики<span class="accent">.</span></h1><p>Короткая партия, где каждый ход имеет значение.</p></div><span class="page-chip">02 / 04</span></div>
+      <div class="game-layout">
+        <div class="panel ttt-panel"><div class="game-topline"><span class="live-tag"><i></i> MATCH IN PROGRESS</span><button class="subtle-button" id="newTtt">↻ Новая игра</button></div><div class="score-row"><div class="score-card active-score" id="xScoreCard"><span class="score-symbol x-symbol">×</span><small>ИГРОК X</small><b id="xScore">0</b></div><div class="turn-status"><span id="turnText">ХОД ИГРОКА</span><b id="turnSymbol">×</b></div><div class="score-card" id="oScoreCard"><span class="score-symbol o-symbol">○</span><small id="oPlayerLabel">КОМПЬЮТЕР</small><b id="oScore">0</b></div></div><div class="ttt-board" id="tttBoard" role="group" aria-label="Игровое поле крестики-нолики"></div><div class="game-result" id="tttResult">Твой ход — поставь крестик</div></div>
+        <div class="panel game-settings"><div class="panel-top"><span>ПАРАМЕТРЫ ИГРЫ</span></div><label class="setting-label" for="tttMode">РЕЖИМ</label><div class="mode-switch"><button class="mode-button active" data-ttt-mode="ai">Против ПК</button><button class="mode-button" data-ttt-mode="two">На двоих</button></div><div class="setting-divider"></div><div class="tip-block"><span class="tip-icon">✦</span><div><b>Маленькая подсказка</b><p>Занимай центр или углы в начале игры — так у тебя будет больше вариантов для победы.</p></div></div><div class="game-stat-line"><span>ТВОИ ПОБЕДЫ</span><b id="winsStat">0</b></div></div>
+      </div>
+    </section>
+    <section class="page" id="page-snake">
+      <div class="page-heading"><div><div class="eyebrow">CLASSIC ARCADE REIMAGINED</div><h1>Змейка<span class="accent">.</span></h1><p>Собирай точки, не врезайся в себя и увеличивай счёт.</p></div><span class="page-chip">03 / 04</span></div>
+      <div class="snake-layout"><div class="panel snake-panel"><div class="snake-hud"><div><small>ТЕКУЩИЙ СЧЁТ</small><b id="snakeScore">000</b></div><div><small>РЕКОРД</small><b id="snakeBest">000</b></div><div class="snake-state" id="snakeState">ГОТОВ К ИГРЕ</div></div><div class="snake-board-wrap"><canvas id="snakeCanvas" width="600" height="600" aria-label="Поле игры змейка"></canvas><div class="snake-overlay" id="snakeOverlay"><div class="overlay-symbol">⌁</div><b id="snakeOverlayTitle">Готов?</b><p id="snakeOverlayText">Нажми старт, чтобы начать игру</p><button class="primary-button" id="snakeStart">Начать игру <span>↗</span></button></div></div><div class="snake-controls"><button id="snakePause" class="subtle-button">Ⅱ Пауза</button><span>WASD / стрелки</span><button id="snakeRestart" class="subtle-button">↻ Заново</button></div><div class="touch-pad"><button data-dir="up" aria-label="Вверх">↑</button><div><button data-dir="left" aria-label="Влево">←</button><button data-dir="down" aria-label="Вниз">↓</button><button data-dir="right" aria-label="Вправо">→</button></div></div></div><div class="panel snake-info"><div class="panel-top"><span>КАК ИГРАТЬ</span></div><div class="instruction-row"><span class="instruction-key">01</span><p>Управляй змейкой с помощью стрелок или WASD.</p></div><div class="instruction-row"><span class="instruction-key">02</span><p>Собирай светящиеся сферы — каждая даёт +10 очков.</p></div><div class="instruction-row"><span class="instruction-key">03</span><p>Не касайся стен и собственного хвоста.</p></div><div class="snake-tip"><span>✦</span><p>На телефоне используй кнопки управления под игровым полем.</p></div></div></div>
+    </section>
+    <section class="page" id="page-weather">
+      <div class="page-heading"><div><div class="eyebrow">WEATHER AROUND YOU</div><h1>Погода<span class="accent">.</span></h1><p>Выбери место — атмосфера на экране подстроится под него.</p></div><span class="page-chip">04 / 04</span></div>
+      <div class="weather-search panel"><div class="location-input-wrap"><span>⌖</span><input id="locationInput" placeholder="Введи город или населённый пункт..." autocomplete="off"><button id="searchLocation">Найти <b>↗</b></button><div class="suggestions" id="suggestions" hidden></div></div><button class="map-toggle" id="mapToggle">⌖ Выбрать на карте</button><button class="locate-button" id="locateButton" title="Моё местоположение">◎</button></div>
+      <div class="map-panel panel" id="mapPanel" hidden><div class="map-heading"><div><b>Выбери точку на карте</b><small>Нажми на любое место, чтобы узнать погоду</small></div><button id="closeMap">×</button></div><div id="weatherMap"></div><div class="map-footer"><span id="mapCoordinates">Точка не выбрана</span><button id="useMapPoint" disabled>Использовать эту точку ↗</button></div></div>
+      <div class="weather-grid"><div class="panel weather-main"><div class="weather-location"><div><span class="live-tag"><i></i> LIVE WEATHER</span><h2 id="weatherCity">Определи местоположение</h2><p id="weatherUpdated">Данные из открытых метеосервисов</p></div><div class="weather-big-icon" id="weatherIcon">☁</div></div><div class="temperature-line"><strong id="temperature">—°</strong><div><b id="weatherDescription">Ожидание данных</b><span>Ощущается как <b id="feelsLike">—°</b></span></div></div><div class="weather-details"><div><span>ВЛАЖНОСТЬ</span><b id="humidity">—</b></div><div><span>ВЕТЕР</span><b id="wind">—</b></div><div><span>ДАВЛЕНИЕ</span><b id="pressure">—</b></div><div><span>ВИДИМОСТЬ</span><b id="visibility">—</b></div></div><div class="weather-source"><span>ИСТОЧНИКИ</span><b id="sourceStatus">Ожидание запроса</b></div></div><div class="panel forecast-panel"><div class="panel-top"><span>СЛЕДУЮЩИЕ ЧАСЫ</span><span class="forecast-caption">ПРОГНОЗ</span></div><div id="hourlyForecast" class="hourly-list"><div class="forecast-placeholder">Выбери город, чтобы загрузить прогноз</div></div><div class="sun-times"><div><span>☀ ВОСХОД</span><b id="sunrise">—:—</b></div><div><span>☾ ЗАКАТ</span><b id="sunset">—:—</b></div></div></div></div>
+      <div class="weather-footnote"><span>ⓘ</span><p>Погода загружается из Open-Meteo и wttr.in. Если один сервис недоступен, используется другой. Точность зависит от доступности внешних источников.</p></div>
+    </section>
+  </main>
 </div>
-
-<div class="modal" id="imageModal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-<button class="modal-backdrop" id="modalBackdrop" type="button" aria-label="Закрыть просмотр"></button>
-<div class="modal-panel"><button class="modal-close" id="modalClose" type="button" aria-label="Закрыть">×</button><div class="modal-image-wrap"><img id="modalImage" alt=""></div>
-<div class="modal-details"><div class="modal-heading"><div><div class="eyebrow">WALLPAPER DETAILS</div><h2 id="modalTitle">Изображение</h2></div><button class="modal-favorite" id="modalFavorite" type="button" aria-label="Добавить в избранное">♡</button></div>
-<div class="modal-facts" id="modalFacts"></div><p class="modal-credit" id="modalCredit"></p><div class="modal-actions"><a class="download-button" id="downloadLink" href="#" target="_blank" rel="noopener noreferrer">Открыть оригинал ↗</a><a class="source-button" id="sourceLink" href="#" target="_blank" rel="noopener noreferrer">Страница источника</a></div><p class="license-note" id="licenseNote"></p></div></div></div>
-
-<div class="modal settings-modal" id="settingsModal" hidden role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-<button class="modal-backdrop" id="settingsBackdrop" type="button" aria-label="Закрыть настройки"></button>
-<div class="settings-panel"><div class="settings-head"><div><div class="eyebrow">PERSONALIZE YOUR SPACE</div><h2 id="settingsTitle">Настройки</h2></div><button class="modal-close" id="settingsClose" type="button" aria-label="Закрыть">×</button></div>
-<div class="settings-group"><div><strong>Оформление</strong><p>Выбери внешний вид сайта</p></div><div class="theme-options" role="group" aria-label="Тема"><button type="button" data-theme-choice="dark" class="theme-choice is-active"><span>◐</span> Тёмная</button><button type="button" data-theme-choice="light" class="theme-choice"><span>☼</span> Светлая</button><button type="button" data-theme-choice="system" class="theme-choice"><span>◑</span> Системная</button></div></div>
-<div class="settings-group"><div><strong>Визуальные эффекты</strong><p>Настрой динамику интерфейса</p></div><label class="toggle-row"><span><b>Частицы</b><small>Плавающие точки на фоне</small></span><input id="particlesToggle" type="checkbox" checked><i></i></label><label class="toggle-row"><span><b>Анимации</b><small>Плавные переходы и появления</small></span><input id="motionToggle" type="checkbox" checked><i></i></label><label class="toggle-row"><span><b>3D-эффекты</b><small>Небольшой наклон карточек</small></span><input id="tiltToggle" type="checkbox" checked><i></i></label></div>
-<div class="settings-foot"><span>Настройки сохраняются на этом устройстве.</span><button id="resetSettings" type="button">Сбросить</button></div></div></div>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<footer class="app-footer"><span>© <span id="year"></span> MULTITOOL</span><span>PLAY · EXPLORE · REPEAT</span><span>Сделано для любого экрана</span></footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<div class="modal" id="settingsModal" hidden><div class="modal-backdrop" id="settingsBackdrop"></div><div class="settings-dialog panel"><div class="settings-dialog-head"><div><div class="eyebrow">PERSONAL SPACE</div><h2>Настройки</h2></div><button id="settingsClose">×</button></div><div class="pref-row"><div><b>Звуковые эффекты</b><small>Звуки кнопок, вращения и игры</small></div><input type="checkbox" id="prefSound" checked></div><div class="pref-row"><div><b>Фоновая атмосфера</b><small>Частицы погоды и эффекты</small></div><input type="checkbox" id="prefParticles" checked></div><div class="pref-row"><div><b>Уменьшить анимации</b><small>Более спокойные переходы</small></div><input type="checkbox" id="prefMotion"></div><div class="pref-row"><div><b>Тема оформления</b><small>Тёмная или светлая</small></div><select id="prefTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="system">Системная</option></select></div><div class="settings-dialog-foot">Настройки сохраняются в этом браузере.</div></div></div>
 </body>
 </html>
