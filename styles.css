@@ -153,3 +153,5 @@ button:disabled{cursor:not-allowed;filter:saturate(.45);opacity:.58}
 .ai-particles-disabled .ai-particle-layer,.ai-particles-disabled .ai-move-flash{display:none!important}
 .autoplay-visual-controls label{user-select:none}
 @media(prefers-reduced-motion:reduce){.ai-particle,.ai-esp-danger,.ai-opponent-move,.ai-move-flash{animation:none!important}}
+
+.ttt-cell{position:relative;overflow:hidden}
